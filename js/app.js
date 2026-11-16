@@ -140,7 +140,10 @@ function allCategories() {
   return [...set];
 }
 const isDinner = r => !NON_DINNER.includes(r.category);
-const blankWeek = () => ({ days: Array(7).fill(null), cooked: Array(7).fill(false), cookLog: {}, checked: {}, extras: [] });
+const blankWeek = () => ({ days: Array(7).fill(null), cooked: Array(7).fill(false), cookLog: {}, checked: {}, extras: [], sides: [] });
+/** La semaine contient-elle cette recette (dîner ou dessert/goûter/base) ? */
+const weekHas = (w, rid) => w.days.includes(rid) || (w.sides || []).some(x => x.r === rid);
+const yieldText = r => r.yield || "3 portions";
 const getWeek = ws => state.weeks[ws] || blankWeek();
 const ensureWeek = ws => (state.weeks[ws] ||= blankWeek());
 
@@ -148,12 +151,12 @@ const ensureWeek = ws => (state.weeks[ws] ||= blankWeek());
 function lastMadeBefore(rid, ws) {
   let best = null;
   for (const [k, w] of Object.entries(state.weeks)) {
-    if (k < ws && w.days.includes(rid) && (!best || k > best)) best = k;
+    if (k < ws && weekHas(w, rid) && (!best || k > best)) best = k;
   }
   return best;
 }
 function lastMadeInfo(rid, ws) {
-  if (getWeek(ws).days.includes(rid)) return { txt: "déjà au planning de cette semaine", warn: true, age: 0 };
+  if (weekHas(getWeek(ws), rid)) return { txt: "déjà au planning de cette semaine", warn: true, age: 0 };
   const l = lastMadeBefore(rid, ws);
   if (!l) return { txt: "pas encore cuisiné", warn: false, age: 999 };
   const n = weeksBetween(l, ws);
@@ -216,9 +219,10 @@ function computeShopping(ws) {
   const w = getWeek(ws);
   const map = new Map();
   let planned = 0;
-  w.days.forEach((rid, i) => {
-    const r = rid && getRecipe(rid);
-    if (!r || w.cooked[i]) return; // un dîner déjà cuisiné n'est plus à acheter
+  const todo = []; // un plat déjà cuisiné n'est plus à acheter
+  w.days.forEach((rid, i) => { const r = rid && getRecipe(rid); if (r && !w.cooked[i]) todo.push(r); });
+  (w.sides || []).forEach(x => { const r = getRecipe(x.r); if (r && !x.c) todo.push(r); });
+  todo.forEach(r => {
     planned++;
     for (const ing of r.ingredients) {
       if (!ing.name) continue;
@@ -268,7 +272,8 @@ function shoppingText(ws) {
   const remaining = toBuy.filter(it => !w.checked[it.key]);
   const groups = groupByAisle(remaining);
   const lines = [`🛒 Courses — semaine du ${frDate(parseIso(ws), { day: "numeric", month: "long" })}`, ""];
-  const menu = w.days.map((id, i) => id && getRecipe(id) ? `${DAYS[i].slice(0, 3)}. ${getRecipe(id).name}` : null).filter(Boolean);
+  const menu = w.days.map((id, i) => id && getRecipe(id) ? `${DAYS[i].slice(0, 3)}. ${getRecipe(id).name}` : null).filter(Boolean)
+    .concat((w.sides || []).filter(x => getRecipe(x.r)).map(x => `+ ${getRecipe(x.r).name}`));
   if (menu.length) { lines.push("Menus :", ...menu.map(m => "  " + m), ""); }
   for (const [a, items] of Object.entries(groups)) {
     if (!items.length) continue;
@@ -403,6 +408,7 @@ function renderWeek() {
     ${weekNav()}
     <p class="summary">${n}/7 dîners planifiés · ${nFish} avec poisson · ${nCookeo} au Cookeo</p>
     <div class="days">${days}</div>
+    ${sidesCard(w)}
     <div class="toolbar">
       <button class="btn primary" data-action="autofill">✨ Compléter les jours vides</button>
       <button class="btn" data-action="goto" data-tab="shopping">🛒 Liste de courses</button>
@@ -411,11 +417,31 @@ function renderWeek() {
     <p class="hint">Astuce : « Compléter » choisit des recettes de saison qui n'ont pas été faites depuis au moins ${RECENT_WEEKS} semaines (2 poissons maximum par semaine). « Marquer cuisiné » déduit les ingrédients du garde-manger.</p>`;
 }
 
-function openPicker(day) {
-  ui.pickerDay = day;
-  const date = addDays(parseIso(ui.weekStart), day);
+function sidesCard(w) {
+  const sides = (w.sides || []).filter(x => getRecipe(x.r));
+  return `<div class="card sides">
+    <div class="row between"><h3>🍰 Desserts, goûters & bases</h3>
+      <button class="btn small primary" data-action="pick-side">＋ Ajouter</button></div>
+    ${sides.length ? `<ul class="side-list">${sides.map(x => {
+      const r = getRecipe(x.r);
+      return `<li class="${x.c ? "cooked" : ""}">
+        <span class="side-main"><button class="recipe-link" data-action="view" data-id="${r.id}">${esc(r.name)}</button>
+          <span class="small muted">${esc(r.category)} · ${esc(yieldText(r))}</span></span>
+        <span class="p-actions">
+          <button class="btn small ${x.c ? "ok" : "outline"}" data-action="side-cooked" data-id="${x.id}">${x.c ? "✓ Fait" : "Marquer fait"}</button>
+          <button class="icon-btn small" data-action="side-remove" data-id="${x.id}" aria-label="Retirer">✕</button>
+        </span></li>`;
+    }).join("")}</ul>`
+    : `<p class="small muted">Un dessert, un goûter ou une pâte à préparer cette semaine ? Ajoutez-le ici : ses ingrédients iront dans la liste de courses.</p>`}
+  </div>`;
+}
+
+function openPicker(day, side = false) {
+  ui.pickerDay = side ? null : day;
+  ui.pickerSide = side;
+  const date = side ? null : addDays(parseIso(ui.weekStart), day);
   openModal(`
-    <div class="modal-head"><h2>Dîner du ${DAYS[day].toLowerCase()} ${frDate(date, { day: "numeric", month: "long" })}</h2>
+    <div class="modal-head"><h2>${side ? "Dessert, goûter ou base" : `Dîner du ${DAYS[day].toLowerCase()} ${frDate(date, { day: "numeric", month: "long" })}`}</h2>
       <button class="icon-btn" data-action="close" aria-label="Fermer">✕</button></div>
     ${filterBar("picker", seasonOf(parseIso(ui.weekStart)))}
     <div id="pickerList" class="pick-list"></div>
@@ -427,7 +453,7 @@ function renderPickerList() {
   if (!el) return;
   const ws = ui.weekStart;
   const list = state.recipes
-    .filter(r => matchesFilters(r, ui.filters.picker, seasonOf(parseIso(ws))))
+    .filter(r => isDinner(r) !== !!ui.pickerSide && matchesFilters(r, ui.filters.picker, seasonOf(parseIso(ws))))
     .map(r => ({ r, info: lastMadeInfo(r.id, ws) }))
     .sort((a, b) => (a.info.warn - b.info.warn) || a.r.name.localeCompare(b.r.name, "fr"));
   el.innerHTML = list.map(({ r, info }) => `
@@ -436,6 +462,13 @@ function renderPickerList() {
       <span class="badges">${badges(r)}</span>
       <span class="small ${info.warn ? "warn-text" : "muted"}">${r.time} min · ${info.warn ? "⚠️ " : ""}${info.txt}</span>
     </button>`).join("") || `<p class="empty">Aucune recette ne correspond aux filtres.</p>`;
+}
+
+function addSide(rid) {
+  const w = ensureWeek(ui.weekStart);
+  w.sides = w.sides || [];
+  w.sides.push({ id: uid(), r: rid, c: false, l: null });
+  save(); render();
 }
 
 function markCooked(i) {
@@ -606,22 +639,25 @@ function viewRecipe(id) {
   openModal(`
     <div class="modal-head"><h2>${esc(r.name)}</h2><button class="icon-btn" data-action="close" aria-label="Fermer">✕</button></div>
     <div class="badges">${badges(r)}</div>
-    <p class="small muted">3 portions · ⏱ ${r.time} min · ${info.txt}</p>
+    <p class="small muted">${esc(yieldText(r))} · ⏱ ${r.time} min · ${info.txt}</p>
     ${r.cookeo ? `<div class="cookeo-box"><strong>🍲 Cookeo :</strong> ${esc(r.cookeoNote || "recette adaptée au Cookeo.")}</div>` : ""}
     ${r.fish ? `<div class="fish-box">🐟 Maquereau pour elle (2 portions : dîner + déjeuner), sardines pour toi (1 portion).</div>` : ""}
-    <h3>Ingrédients <small class="muted">(3 portions)</small></h3>
+    <h3>Ingrédients <small class="muted">(${esc(yieldText(r))})</small></h3>
     <ul class="ing-list">${r.ingredients.map(i => `<li><span>${esc(i.name)}</span><span class="muted">${esc(isNum(i.qty) ? fmtQty(i.qty, i.unit) : "selon goût")}</span></li>`).join("")}</ul>
     <h3>Préparation</h3>
     <ol class="steps">${r.steps.map(s => `<li>${esc(s)}</li>`).join("")}</ol>
     ${r.notes ? `<p class="note">💡 ${esc(r.notes)}</p>` : ""}
     ${r.source ? `<p class="small muted">Source : ${/^https?:\/\//i.test(r.source) ? `<a href="${esc(r.source)}" target="_blank" rel="noopener noreferrer">${esc(r.source.replace(/^https?:\/\/(www\.)?/i, "").slice(0, 50))}</a>` : esc(r.source)}</p>` : ""}
-    <div class="card add-to-week">
+    ${!isDinner(r) ? `<div class="card add-to-week">
+      <p class="small">Semaine du ${frDate(start, { day: "numeric", month: "short" })} : les ingrédients iront dans la liste de courses.</p>
+      <button class="btn primary" data-action="add-side" data-id="${r.id}">🍰 Ajouter à la semaine</button>
+    </div>` : `<div class="card add-to-week">
       <label for="addDay" class="small">Ajouter à la semaine du ${frDate(start, { day: "numeric", month: "short" })} :</label>
       <div class="row">
         <select id="addDay">${DAYS.map((d, i) => `<option value="${i}">${d}${w.days[i] && getRecipe(w.days[i]) ? " (remplace : " + esc(getRecipe(w.days[i]).name.slice(0, 22)) + "…)" : ""}</option>`).join("")}</select>
         <button class="btn primary" data-action="add-to-day" data-id="${r.id}">Ajouter</button>
       </div>
-    </div>
+    </div>`}
     <div class="modal-actions">
       <button class="btn" data-action="edit-recipe" data-id="${r.id}">✏️ Modifier</button>
       <button class="btn" data-action="dup-recipe" data-id="${r.id}">⧉ Dupliquer</button>
@@ -654,6 +690,7 @@ function editRecipe(id, asCopy = false) {
         <label>Catégorie<select name="category">${allCategories().map(c => `<option ${c === r.category ? "selected" : ""}>${esc(c)}</option>`).join("")}</select></label>
         <label>Temps (min)<input name="time" type="number" min="0" inputmode="numeric" value="${r.time}"></label>
       </div>
+      <label>Rendement (vide = 3 portions)<input name="yield" value="${esc(r.yield || "")}" placeholder="ex : 1 tarte, 12 biscuits, 6 verrines"></label>
       <fieldset><legend>Saisons</legend>
         ${Object.keys(SEASON_LABELS).map(s => `<label class="chk"><input type="checkbox" name="season" value="${s}" ${r.seasons.includes(s) ? "checked" : ""}> ${SEASON_ICONS[s]} ${SEASON_LABELS[s]}</label>`).join("")}
       </fieldset>
@@ -700,12 +737,16 @@ function saveRecipeForm(form) {
     steps: fd.get("steps").split("\n").map(s => s.trim()).filter(Boolean),
     notes: fd.get("notes").trim(),
     source: fd.get("source").trim(),
+    yield: fd.get("yield").trim(),
     seed: existing ? !!existing.seed : false
   };
   if (existing) state.recipes[state.recipes.indexOf(existing)] = r;
   else state.recipes.push(r);
   save();
-  if (ui.pickerDay !== null && !existing) {
+  if (ui.pickerSide && !existing) {
+    addSide(r.id);
+    closeModal();
+  } else if (ui.pickerDay !== null && !existing) {
     ensureWeek(ui.weekStart).days[ui.pickerDay] = r.id;
     ui.pickerDay = null;
     save(); closeModal();
@@ -838,7 +879,7 @@ function renderHistory() {
     ${weeks.map(([k, w]) => `<div class="card week-hist ${k === cur ? "current" : ""}">
       <div class="row between"><h3>Semaine du ${frDate(parseIso(k), { day: "numeric", month: "long", year: "numeric" })}</h3>
         <span class="small muted">${weekLabel(k)}</span></div>
-      <ul class="simple">${w.days.map((id, i) => id ? `<li><span class="muted small">${DAYS[i].slice(0, 3)}.</span> ${getRecipe(id) ? `<button class="link" data-action="view" data-id="${id}">${esc(getRecipe(id).name)}</button>` : "<em>recette supprimée</em>"} ${w.cooked[i] ? "✓" : ""}</li>` : "").join("")}</ul>
+      <ul class="simple">${w.days.map((id, i) => id ? `<li><span class="muted small">${DAYS[i].slice(0, 3)}.</span> ${getRecipe(id) ? `<button class="link" data-action="view" data-id="${id}">${esc(getRecipe(id).name)}</button>` : "<em>recette supprimée</em>"} ${w.cooked[i] ? "✓" : ""}</li>` : "").join("")}${(w.sides || []).filter(x => getRecipe(x.r)).map(x => `<li><span class="muted small">+</span> <button class="link" data-action="view" data-id="${x.r}">${esc(getRecipe(x.r).name)}</button> ${x.c ? "✓" : ""}</li>`).join("")}</ul>
       <button class="btn small" data-action="open-week" data-week="${k}">Ouvrir cette semaine</button>
     </div>`).join("") || `<p class="empty">L'historique se remplit au fil des semaines planifiées.</p>`}
     <div class="card">
@@ -937,6 +978,7 @@ function normalizeRecipe(o) {
     steps: (o.steps || []).map(String).filter(Boolean),
     notes: String(o.notes || ""),
     source: String(o.source || ""),
+    yield: String(o.yield || ""),
     seed: false
   };
 }
@@ -967,7 +1009,7 @@ function openModal(html) {
 }
 function closeModal() { if (modal.open) modal.close(); }
 modal.addEventListener("click", e => { if (e.target === modal) closeModal(); });
-modal.addEventListener("close", () => { ui.pickerDay = null; });
+modal.addEventListener("close", () => { ui.pickerDay = null; ui.pickerSide = false; });
 
 let toastTimer;
 function toast(msg) {
@@ -988,7 +1030,31 @@ const ACTIONS = {
   "open-week": el => { ui.weekStart = el.dataset.week; ui.tab = "week"; render(); window.scrollTo(0, 0); },
 
   "pick-day": el => openPicker(+el.dataset.day),
+  "pick-side": () => openPicker(null, true),
+  "add-side": el => { addSide(el.dataset.id); closeModal(); toast("Ajouté à la semaine ✓"); },
+  "side-cooked": el => {
+    const w = ensureWeek(ui.weekStart), x = w.sides.find(s => s.id === el.dataset.id);
+    const r = x && getRecipe(x.r);
+    if (!r) return;
+    if (x.c) {
+      if (!confirm("Annuler « fait » ? Les quantités déduites seront remises au garde-manger.")) return;
+      restoreToPantry(x.l); x.c = false; x.l = null;
+    } else {
+      const { log, msgs } = deductFromPantry(r);
+      x.c = true; x.l = log;
+      toast(msgs.length ? "Garde-manger mis à jour — " + msgs.join(" · ") : "Miam ! 😋");
+    }
+    save(); render();
+  },
+  "side-remove": el => {
+    const w = ensureWeek(ui.weekStart), x = w.sides.find(s => s.id === el.dataset.id);
+    if (!x) return;
+    if (x.c) restoreToPantry(x.l);
+    w.sides = w.sides.filter(s => s !== x);
+    save(); render();
+  },
   pick: el => {
+    if (ui.pickerSide) { addSide(el.dataset.id); closeModal(); return; }
     ensureWeek(ui.weekStart).days[ui.pickerDay] = el.dataset.id;
     ensureWeek(ui.weekStart).cooked[ui.pickerDay] = false;
     save(); closeModal(); render();
@@ -1005,7 +1071,7 @@ const ACTIONS = {
     if (!confirm("Vider tous les dîners de cette semaine ?")) return;
     const w = ensureWeek(ui.weekStart);
     w.cooked.forEach((c, i) => c && restoreToPantry(w.cookLog[i]));
-    Object.assign(w, blankWeek(), { extras: w.extras });
+    Object.assign(w, blankWeek(), { extras: w.extras, sides: w.sides });
     save(); render();
   },
 

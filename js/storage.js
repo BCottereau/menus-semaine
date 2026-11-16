@@ -13,7 +13,7 @@ const SEED_VERSION = 2;              // incrémenter quand on ajoute des recette
 const TOMBSTONE_DAYS = 365;          // durée de conservation des suppressions
 const SHOPPING_KEEP_DAYS = 60;       // au-delà, les cases cochées des anciennes semaines sont oubliées
 
-const blankWeekObj = () => ({ days: Array(7).fill(null), cooked: Array(7).fill(false), cookLog: {}, checked: {}, extras: [] });
+const blankWeekObj = () => ({ days: Array(7).fill(null), cooked: Array(7).fill(false), cookLog: {}, checked: {}, extras: [], sides: [] });
 const emptyState = () => ({ version: 3, seedVersion: SEED_VERSION, recipes: [], weeks: {}, pantry: [], stamps: {}, deleted: {} });
 
 /*
@@ -23,6 +23,7 @@ const emptyState = () => ({ version: 3, seedVersion: SEED_VERSION, recipes: [], 
  *   d:<semaine>:<jour> le dîner d'un jour (recette, « cuisiné », déductions)
  *   c:<semaine>:<clé>  une case cochée de la liste de courses
  *   x:<semaine>:<id>   un article ajouté à la main à la liste
+ *   s:<semaine>:<id>   un dessert / goûter / base prévu dans la semaine
  * stamps[id] = date de dernière modification ; deleted[id] = date de suppression.
  */
 function flattenState(s) {
@@ -33,6 +34,7 @@ function flattenState(s) {
     for (let i = 0; i < 7; i++) m.set(`d:${ws}:${i}`, { r: w.days[i] || null, c: !!w.cooked[i], l: w.cookLog[i] || null });
     for (const k of Object.keys(w.checked)) if (w.checked[k]) m.set(`c:${ws}:${k}`, true);
     w.extras.forEach(x => m.set(`x:${ws}:${x.id}`, x));
+    (w.sides || []).forEach(x => m.set(`s:${ws}:${x.id}`, x));
   }
   return m;
 }
@@ -48,6 +50,7 @@ function unflattenState(m) {
       if (t === "d") { const i = +rest; w.days[i] = e.r; w.cooked[i] = !!e.c; if (e.l) w.cookLog[i] = e.l; }
       else if (t === "c") w.checked[rest] = true;
       else if (t === "x") w.extras.push(e);
+      else if (t === "s") w.sides.push(e);
     }
   }
   return s;
@@ -73,6 +76,7 @@ function normalizeState(s) {
     w.cookLog = w.cookLog || {};
     w.checked = w.checked || {};
     w.extras = Array.isArray(w.extras) ? w.extras.filter(x => x && x.id) : [];
+    w.sides = Array.isArray(w.sides) ? w.sides.filter(x => x && x.id && x.r) : [];
   }
   s.recipes.forEach(r => {
     delete r.updatedAt;

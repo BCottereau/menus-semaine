@@ -307,3 +307,11 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
 .toolbar.tight { margin: 0; }
 .modal-inner a { color: var(--accent); }
 @media (max-width: 480px) { .hide-sm { display: none; } }
+
+/* ----- Desserts, goûters & bases ----- */
+.sides { margin-top: 12px; }
+.sides h3 { margin: 0; }
+.side-list { list-style: none; padding: 0; margin: 8px 0 0; }
+.side-list li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 0; border-top: 1px solid var(--line); }
+.side-list li.cooked { opacity: .7; }
+.side-main { flex: 1 1 180px; display: flex; flex-direction: column; }

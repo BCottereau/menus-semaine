@@ -23,11 +23,13 @@ const CATEGORIES = [
   "Crêpes & galettes",
   "Œufs & fromage",
   "Poisson",
+  "Desserts",
+  "Goûters & en-cas",
   "Bases & pâtes"
 ];
 
 /** Catégories qui ne sont pas des dîners (exclues des propositions automatiques). */
-const NON_DINNER = ["Bases & pâtes"];
+const NON_DINNER = ["Desserts", "Goûters & en-cas", "Bases & pâtes"];
 
 const ALL_SEASONS = ["printemps", "ete", "automne", "hiver"];
 const AUT_HIV = ["automne", "hiver"];
