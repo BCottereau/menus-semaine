@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#2f6b3f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Menus">
+  <title>Menus de la semaine</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥕</text></svg>">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>🥕 Menus<span class="hide-sm"> de la semaine</span></h1>
+    <div class="topbar-right">
+      <button id="syncBadge" class="season-pill sync-pill" data-action="sync-settings" title="Synchronisation">☁️</button>
+      <span id="seasonBadge" class="season-pill"></span>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs" aria-label="Navigation">
+    <button data-tab="week" class="active"><span class="ico">📅</span><span>Semaine</span></button>
+    <button data-tab="shopping"><span class="ico">🛒</span><span>Courses</span></button>
+    <button data-tab="recipes"><span class="ico">📖</span><span>Recettes</span></button>
+    <button data-tab="pantry"><span class="ico">🥫</span><span>Placard</span></button>
+    <button data-tab="ideas"><span class="ico">💡</span><span>Idées</span></button>
+    <button data-tab="history"><span class="ico">🕘</span><span>Historique</span></button>
+  </nav>
+
+  <main>
+    <section id="tab-week" class="tab active"></section>
+    <section id="tab-shopping" class="tab"></section>
+    <section id="tab-recipes" class="tab"></section>
+    <section id="tab-pantry" class="tab"></section>
+    <section id="tab-ideas" class="tab"></section>
+    <section id="tab-history" class="tab"></section>
+  </main>
+
+  <dialog id="modal"><div id="modalBody" class="modal-inner"></div></dialog>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <datalist id="ingNames"></datalist>
+  <input type="file" id="importFile" accept="application/json,.json" hidden>
+
+  <!-- Scripts classiques (pas de modules) : fonctionne en ouvrant directement le fichier -->
+  <script src="js/recipes.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/sync.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
