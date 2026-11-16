@@ -23,13 +23,18 @@ const CATEGORIES = [
   "Crêpes & galettes",
   "Œufs & fromage",
   "Viande & poisson",
+  "Post-training",
+  "Low-carb",
+  "Petit-déjeuner",
   "Desserts",
   "Goûters & en-cas",
   "Bases & pâtes"
 ];
 
 /** Catégories qui ne sont pas des dîners (exclues des propositions automatiques). */
-const NON_DINNER = ["Desserts", "Goûters & en-cas", "Bases & pâtes"];
+const NON_DINNER = ["Petit-déjeuner", "Desserts", "Goûters & en-cas", "Bases & pâtes"];
+/** Dîners choisis à la main uniquement (jamais proposés par « Compléter les jours vides »). */
+const MANUAL_ONLY = ["Post-training", "Low-carb"];
 
 const ALL_SEASONS = ["printemps", "ete", "automne", "hiver"];
 const AUT_HIV = ["automne", "hiver"];

@@ -7,9 +7,9 @@
 const DAYS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
 const SEASON_LABELS = { printemps: "Printemps", ete: "Été", automne: "Automne", hiver: "Hiver" };
 const SEASON_ICONS = { printemps: "🌱", ete: "☀️", automne: "🍂", hiver: "❄️" };
-const UNITS = ["g", "kg", "ml", "cl", "l", "pièce", "gousse", "botte", "cube", "boîte",
+const UNITS = ["g", "kg", "ml", "cl", "l", "pièce", "gousse", "botte", "brin", "feuille", "cube", "boîte",
   "sachet", "tranche", "c. à s.", "c. à c.", "pincée", "poignée"];
-const COUNTABLE = new Set(["pièce", "gousse", "botte", "cube", "boîte", "sachet", "tranche", "pincée", "poignée"]);
+const COUNTABLE = new Set(["pièce", "gousse", "botte", "brin", "feuille", "cube", "boîte", "sachet", "tranche", "pincée", "poignée"]);
 const UNIT_ALIASES = {
   gr: "g", gramme: "g", grammes: "g", kilo: "kg", kilos: "kg", kgs: "kg",
   litre: "l", litres: "l", ml: "ml", cl: "cl",
@@ -414,13 +414,13 @@ function renderWeek() {
       <button class="btn" data-action="goto" data-tab="shopping">🛒 Liste de courses</button>
       <button class="btn ghost" data-action="clear-week">Vider la semaine</button>
     </div>
-    <p class="hint">Astuce : « Compléter » choisit des recettes de saison qui n'ont pas été faites depuis au moins ${RECENT_WEEKS} semaines (jamais de recette avec viande). « Marquer cuisiné » déduit les ingrédients du garde-manger.</p>`;
+    <p class="hint">Astuce : « Compléter » choisit des recettes de saison qui n'ont pas été faites depuis au moins ${RECENT_WEEKS} semaines (ni recette avec viande, ni post-training / low-carb). « Marquer cuisiné » déduit les ingrédients du garde-manger.</p>`;
 }
 
 function sidesCard(w) {
   const sides = (w.sides || []).filter(x => getRecipe(x.r));
   return `<div class="card sides">
-    <div class="row between"><h3>🍰 Desserts, goûters & bases</h3>
+    <div class="row between"><h3>🍰 Petits-déj, desserts, goûters & bases</h3>
       <button class="btn small primary" data-action="pick-side">＋ Ajouter</button></div>
     ${sides.length ? `<ul class="side-list">${sides.map(x => {
       const r = getRecipe(x.r);
@@ -432,7 +432,7 @@ function sidesCard(w) {
           <button class="icon-btn small" data-action="side-remove" data-id="${x.id}" aria-label="Retirer">✕</button>
         </span></li>`;
     }).join("")}</ul>`
-    : `<p class="small muted">Un dessert, un goûter ou une pâte à préparer cette semaine ? Ajoutez-le ici : ses ingrédients iront dans la liste de courses.</p>`}
+    : `<p class="small muted">Un petit-déjeuner, un dessert, un goûter ou une pâte à préparer cette semaine ? Ajoutez-le ici : ses ingrédients iront dans la liste de courses.</p>`}
   </div>`;
 }
 
@@ -441,7 +441,7 @@ function openPicker(day, side = false) {
   ui.pickerSide = side;
   const date = side ? null : addDays(parseIso(ui.weekStart), day);
   openModal(`
-    <div class="modal-head"><h2>${side ? "Dessert, goûter ou base" : `Dîner du ${DAYS[day].toLowerCase()} ${frDate(date, { day: "numeric", month: "long" })}`}</h2>
+    <div class="modal-head"><h2>${side ? "Petit-déj, dessert, goûter ou base" : `Dîner du ${DAYS[day].toLowerCase()} ${frDate(date, { day: "numeric", month: "long" })}`}</h2>
       <button class="icon-btn" data-action="close" aria-label="Fermer">✕</button></div>
     ${filterBar("picker", seasonOf(parseIso(ui.weekStart)))}
     <div id="pickerList" class="pick-list"></div>
@@ -460,7 +460,7 @@ function renderPickerList() {
     <button class="pick-item ${info.warn ? "warn" : ""}" data-action="pick" data-id="${r.id}">
       <span class="pick-name">${esc(r.name)}</span>
       <span class="badges">${badges(r)}</span>
-      <span class="small ${info.warn ? "warn-text" : "muted"}">${r.time} min · ${info.warn ? "⚠️ " : ""}${info.txt}</span>
+      <span class="small ${info.warn ? "warn-text" : "muted"}">${r.time ? r.time + " min · " : ""}${info.warn ? "⚠️ " : ""}${info.txt}</span>
     </button>`).join("") || `<p class="empty">Aucune recette ne correspond aux filtres.</p>`;
 }
 
@@ -500,9 +500,9 @@ function autofill() {
   let filled = 0;
   for (let i = 0; i < 7; i++) {
     if (w.days[i]) continue;
-    const base = state.recipes.filter(r => isDinner(r) && !r.meat && r.seasons.includes(season) && !used.has(r.id));
+    const base = state.recipes.filter(r => isDinner(r) && !r.meat && !MANUAL_ONLY.includes(r.category) && r.seasons.includes(season) && !used.has(r.id));
     const strict = base.filter(r => (catCount[r.category] || 0) < 2 && lastMadeInfo(r.id, ws).age > RECENT_WEEKS);
-    const pool = strict.length ? strict : base.length ? base : state.recipes.filter(r => isDinner(r) && !r.meat && !used.has(r.id));
+    const pool = strict.length ? strict : base.length ? base : state.recipes.filter(r => isDinner(r) && !r.meat && !MANUAL_ONLY.includes(r.category) && !used.has(r.id));
     if (!pool.length) break;
     const pick = pool
       .map(r => ({ r, score: Math.min(lastMadeInfo(r.id, ws).age, 12) + Math.random() * 6 }))
@@ -624,7 +624,7 @@ function renderRecipeList() {
     return `<article class="card recipe-card" data-action="view" data-id="${r.id}" tabindex="0">
       <h3>${esc(r.name)}</h3>
       <div class="badges">${badges(r)}</div>
-      <p class="small muted">⏱ ${r.time} min · ${r.ingredients.length} ingrédients · ${info.txt}</p>
+      <p class="small muted">${r.time ? `⏱ ${r.time} min · ` : ""}${esc(r.yield || "")}${r.yield ? " · " : ""}${r.ingredients.length} ingrédients · ${info.txt}</p>
     </article>`;
   }).join("") || `<p class="empty">Aucune recette ne correspond aux filtres.</p>`;
 }
@@ -637,7 +637,7 @@ function viewRecipe(id) {
   openModal(`
     <div class="modal-head"><h2>${esc(r.name)}</h2><button class="icon-btn" data-action="close" aria-label="Fermer">✕</button></div>
     <div class="badges">${badges(r)}</div>
-    <p class="small muted">${esc(yieldText(r))} · ⏱ ${r.time} min · ${info.txt}</p>
+    <p class="small muted">${esc(yieldText(r))}${r.time ? ` · ⏱ ${r.time} min` : ""} · ${info.txt}</p>
     ${r.cookeo ? `<div class="cookeo-box"><strong>🍲 Cookeo :</strong> ${esc(r.cookeoNote || "recette adaptée au Cookeo.")}</div>` : ""}
     ${r.meat ? `<div class="meat-box">🍖 Recette avec viande ou poisson : pour Baptiste.</div>` : ""}
     <h3>Ingrédients <small class="muted">(${esc(yieldText(r))})</small></h3>
@@ -686,7 +686,7 @@ function editRecipe(id, asCopy = false) {
       <label>Nom<input name="name" required value="${esc(r.name)}"></label>
       <div class="row">
         <label>Catégorie<select name="category">${allCategories().map(c => `<option ${c === r.category ? "selected" : ""}>${esc(c)}</option>`).join("")}</select></label>
-        <label>Temps (min)<input name="time" type="number" min="0" inputmode="numeric" value="${r.time}"></label>
+        <label>Temps (min)<input name="time" type="number" min="0" inputmode="numeric" value="${r.time || ""}"></label>
       </div>
       <label>Rendement (vide = 3 portions)<input name="yield" value="${esc(r.yield || "")}" placeholder="ex : 1 tarte, 12 biscuits, 6 verrines"></label>
       <fieldset><legend>Saisons</legend>
@@ -730,7 +730,7 @@ function saveRecipeForm(form) {
     meat: fd.get("meat") === "on",
     cookeo: fd.get("cookeo") === "on",
     cookeoNote: fd.get("cookeoNote").trim(),
-    time: parseInt(fd.get("time"), 10) || 0,
+    time: parseInt(fd.get("time"), 10) || null,
     ingredients,
     steps: fd.get("steps").split("\n").map(s => s.trim()).filter(Boolean),
     notes: fd.get("notes").trim(),
