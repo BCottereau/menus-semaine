@@ -22,7 +22,7 @@ const CATEGORIES = [
   "Seitan & tofu",
   "Crêpes & galettes",
   "Œufs & fromage",
-  "Poisson",
+  "Viande & poisson",
   "Desserts",
   "Goûters & en-cas",
   "Bases & pâtes"
@@ -38,7 +38,7 @@ const SEED_RECIPES = [
   /* ---------------------------- SOUPES ---------------------------- */
   {
     id: "r01", name: "Velouté de potimarron, lentilles corail & coco",
-    category: "Soupe", seasons: AUT_HIV, fish: false, cookeo: true, time: 30,
+    category: "Soupe", seasons: AUT_HIV, meat: false, cookeo: true, time: 30,
     cookeoNote: "Dorer 3 min, puis cuisson sous pression 10 min.",
     ing: [
       ["potimarron", 1, "pièce", "leg"],
@@ -61,7 +61,7 @@ const SEED_RECIPES = [
   },
   {
     id: "r02", name: "Soupe poireaux-pommes de terre & tartines au chèvre",
-    category: "Soupe", seasons: AUT_HIV, fish: false, cookeo: true, time: 30,
+    category: "Soupe", seasons: AUT_HIV, meat: false, cookeo: true, time: 30,
     cookeoNote: "Dorer 3 min, puis sous pression 8 min.",
     ing: [
       ["poireau", 3, "pièce", "leg"],
@@ -83,7 +83,7 @@ const SEED_RECIPES = [
   },
   {
     id: "r03", name: "Minestrone d'hiver aux haricots blancs",
-    category: "Soupe", seasons: AUT_HIV, fish: false, cookeo: true, time: 35,
+    category: "Soupe", seasons: AUT_HIV, meat: false, cookeo: true, time: 35,
     cookeoNote: "Dorer 3 min, sous pression 6 min, puis mode Mijoter 8 min avec les pâtes.",
     ing: [
       ["oignon", 1, "pièce", "leg"],
@@ -108,7 +108,7 @@ const SEED_RECIPES = [
   },
   {
     id: "r04", name: "Soupe de pois cassés au cumin & croûtons",
-    category: "Soupe", seasons: ["hiver"], fish: false, cookeo: true, time: 35,
+    category: "Soupe", seasons: ["hiver"], meat: false, cookeo: true, time: 35,
     cookeoNote: "Dorer 3 min, puis sous pression 20 min.",
     ing: [
       ["pois cassés", 250, "g", "pro"],
@@ -131,7 +131,7 @@ const SEED_RECIPES = [
   },
   {
     id: "r05", name: "Harira végétarienne (pois chiches & lentilles)",
-    category: "Soupe", seasons: AUT_HIV, fish: false, cookeo: true, time: 35,
+    category: "Soupe", seasons: AUT_HIV, meat: false, cookeo: true, time: 35,
     cookeoNote: "Dorer 3 min, sous pression 12 min, puis Mijoter 5 min avec les vermicelles.",
     ing: [
       ["oignon", 1, "pièce", "leg"],
@@ -157,7 +157,7 @@ const SEED_RECIPES = [
   },
   {
     id: "r06", name: "Soupe miso aux nouilles, tofu & chou chinois",
-    category: "Soupe", seasons: AUT_HIV, fish: false, cookeo: false, time: 25,
+    category: "Soupe", seasons: AUT_HIV, meat: false, cookeo: false, time: 25,
     cookeoNote: "",
     ing: [
       ["pâte miso", 3, "c. à s.", "epi"],
@@ -181,7 +181,7 @@ const SEED_RECIPES = [
   /* ------------------------- LÉGUMINEUSES ------------------------- */
   {
     id: "r07", name: "Dahl de lentilles corail & riz basmati",
-    category: "Légumineuses", seasons: ALL_SEASONS, fish: false, cookeo: true, time: 30,
+    category: "Légumineuses", seasons: ALL_SEASONS, meat: false, cookeo: true, time: 30,
     cookeoNote: "Dorer 3 min, puis sous pression 8 min. Riz : 1 volume pour 1,5 d'eau, 5 min sous pression.",
     ing: [
       ["lentilles corail", 250, "g", "pro"],
@@ -205,7 +205,7 @@ const SEED_RECIPES = [
   },
   {
     id: "r08", name: "Curry de pois chiches & patate douce",
-    category: "Légumineuses", seasons: AUT_HIV, fish: false, cookeo: true, time: 30,
+    category: "Légumineuses", seasons: AUT_HIV, meat: false, cookeo: true, time: 30,
     cookeoNote: "Dorer 3 min, puis sous pression 6 min.",
     ing: [
       ["pois chiches cuits", 400, "g", "pro"],
@@ -228,7 +228,7 @@ const SEED_RECIPES = [
   },
   {
     id: "r09", name: "Chili sin carne",
-    category: "Légumineuses", seasons: ALL_SEASONS, fish: false, cookeo: true, time: 35,
+    category: "Légumineuses", seasons: ALL_SEASONS, meat: false, cookeo: true, time: 35,
     cookeoNote: "Dorer 3 min, puis sous pression 10 min.",
     ing: [
       ["haricots rouges cuits", 400, "g", "pro"],
@@ -252,7 +252,7 @@ const SEED_RECIPES = [
   },
   {
     id: "r10", name: "Lentilles vertes, carottes fondantes & œufs mollets",
-    category: "Légumineuses", seasons: ["printemps", "automne", "hiver"], fish: false, cookeo: true, time: 30,
+    category: "Légumineuses", seasons: ["printemps", "automne", "hiver"], meat: false, cookeo: true, time: 30,
     cookeoNote: "Dorer 2 min, puis sous pression 12 min.",
     ing: [
       ["lentilles vertes", 250, "g", "pro"],
@@ -275,7 +275,7 @@ const SEED_RECIPES = [
   },
   {
     id: "r11", name: "Couscous végétarien aux pois chiches",
-    category: "Légumineuses", seasons: AUT_HIV, fish: false, cookeo: true, time: 40,
+    category: "Légumineuses", seasons: AUT_HIV, meat: false, cookeo: true, time: 40,
     cookeoNote: "Dorer 3 min, puis sous pression 8 min.",
     ing: [
       ["pois chiches cuits", 400, "g", "pro"],
@@ -299,7 +299,7 @@ const SEED_RECIPES = [
   },
   {
     id: "r12", name: "Boulettes de pois chiches au four, boulgour & sauce yaourt",
-    category: "Légumineuses", seasons: ["printemps", "ete"], fish: false, cookeo: false, time: 45,
+    category: "Légumineuses", seasons: ["printemps", "ete"], meat: false, cookeo: false, time: 45,
     cookeoNote: "",
     ing: [
       ["pois chiches cuits", 400, "g", "pro"],
@@ -327,7 +327,7 @@ const SEED_RECIPES = [
   /* ------------------------- SEITAN & TOFU ------------------------ */
   {
     id: "r13", name: "Seitan maison braisé aux carottes & purée",
-    category: "Seitan & tofu", seasons: AUT_HIV, fish: false, cookeo: true, time: 60,
+    category: "Seitan & tofu", seasons: AUT_HIV, meat: false, cookeo: true, time: 60,
     cookeoNote: "Seitan : Dorer 3 min, puis sous pression 20 min dans le bouillon.",
     ing: [
       ["gluten de blé", 150, "g", "epi"],
@@ -351,7 +351,7 @@ const SEED_RECIPES = [
   },
   {
     id: "r14", name: "Bourguignon de seitan & tagliatelles",
-    category: "Seitan & tofu", seasons: AUT_HIV, fish: false, cookeo: true, time: 40,
+    category: "Seitan & tofu", seasons: AUT_HIV, meat: false, cookeo: true, time: 40,
     cookeoNote: "Dorer 5 min, puis sous pression 10 min.",
     ing: [
       ["seitan", 350, "g", "pro"],
@@ -375,7 +375,7 @@ const SEED_RECIPES = [
   },
   {
     id: "r15", name: "Seitan sauté au brocoli, soja-gingembre & soba",
-    category: "Seitan & tofu", seasons: AUT_HIV, fish: false, cookeo: false, time: 25,
+    category: "Seitan & tofu", seasons: AUT_HIV, meat: false, cookeo: false, time: 25,
     cookeoNote: "",
     ing: [
       ["seitan", 300, "g", "pro"],
@@ -398,7 +398,7 @@ const SEED_RECIPES = [
   },
   {
     id: "r16", name: "Tofu fumé, choux de Bruxelles rôtis & boulgour moutarde",
-    category: "Seitan & tofu", seasons: ["hiver"], fish: false, cookeo: false, time: 35,
+    category: "Seitan & tofu", seasons: ["hiver"], meat: false, cookeo: false, time: 35,
     cookeoNote: "",
     ing: [
       ["tofu fumé", 250, "g", "pro"],
@@ -420,7 +420,7 @@ const SEED_RECIPES = [
   },
   {
     id: "r17", name: "Riz sauté au tofu, chou chinois & œufs",
-    category: "Seitan & tofu", seasons: AUT_HIV, fish: false, cookeo: true, time: 25,
+    category: "Seitan & tofu", seasons: AUT_HIV, meat: false, cookeo: true, time: 25,
     cookeoNote: "Riz complet : 1 volume pour 1,5 d'eau, sous pression 15 min (ou utiliser du riz de la veille).",
     ing: [
       ["tofu ferme", 250, "g", "pro"],
@@ -443,7 +443,7 @@ const SEED_RECIPES = [
   },
   {
     id: "r18", name: "Curry vert de tofu, courgettes & riz",
-    category: "Seitan & tofu", seasons: ["ete"], fish: false, cookeo: true, time: 30,
+    category: "Seitan & tofu", seasons: ["ete"], meat: false, cookeo: true, time: 30,
     cookeoNote: "Dorer 3 min, puis sous pression 3 min (les légumes restent croquants).",
     ing: [
       ["tofu ferme", 300, "g", "pro"],
@@ -466,7 +466,7 @@ const SEED_RECIPES = [
   },
   {
     id: "r19", name: "Brochettes de seitan mariné, légumes grillés & semoule",
-    category: "Seitan & tofu", seasons: ["ete"], fish: false, cookeo: false, time: 40,
+    category: "Seitan & tofu", seasons: ["ete"], meat: false, cookeo: false, time: 40,
     cookeoNote: "",
     ing: [
       ["seitan", 350, "g", "pro"],
@@ -493,7 +493,7 @@ const SEED_RECIPES = [
   /* ----------------------- CRÊPES & GALETTES ---------------------- */
   {
     id: "r20", name: "Galettes de sarrasin complètes aux champignons",
-    category: "Crêpes & galettes", seasons: ALL_SEASONS, fish: false, cookeo: false, time: 40,
+    category: "Crêpes & galettes", seasons: ALL_SEASONS, meat: false, cookeo: false, time: 40,
     cookeoNote: "",
     ing: [
       ["farine de sarrasin", 250, "g", "fec"],
@@ -514,7 +514,7 @@ const SEED_RECIPES = [
   },
   {
     id: "r21", name: "Crêpes gratinées épinards-ricotta",
-    category: "Crêpes & galettes", seasons: ["printemps", "automne", "hiver"], fish: false, cookeo: false, time: 50,
+    category: "Crêpes & galettes", seasons: ["printemps", "automne", "hiver"], meat: false, cookeo: false, time: 50,
     cookeoNote: "",
     ing: [
       ["farine T45", 250, "g", "fec"],
@@ -537,7 +537,7 @@ const SEED_RECIPES = [
   },
   {
     id: "r22", name: "Galettes de sarrasin poireaux & chèvre",
-    category: "Crêpes & galettes", seasons: AUT_HIV, fish: false, cookeo: false, time: 40,
+    category: "Crêpes & galettes", seasons: AUT_HIV, meat: false, cookeo: false, time: 40,
     cookeoNote: "",
     ing: [
       ["farine de sarrasin", 250, "g", "fec"],
@@ -561,7 +561,7 @@ const SEED_RECIPES = [
   /* ------------------------ ŒUFS & FROMAGE ------------------------ */
   {
     id: "r23", name: "Risotto petits pois, asperges & parmesan",
-    category: "Œufs & fromage", seasons: ["printemps"], fish: false, cookeo: true, time: 30,
+    category: "Œufs & fromage", seasons: ["printemps"], meat: false, cookeo: true, time: 30,
     cookeoNote: "Dorer 3 min, puis sous pression 6 min.",
     ing: [
       ["riz arborio", 250, "g", "fec"],
@@ -584,7 +584,7 @@ const SEED_RECIPES = [
   },
   {
     id: "r24", name: "Shakshuka & semoule",
-    category: "Œufs & fromage", seasons: ["ete"], fish: false, cookeo: false, time: 30,
+    category: "Œufs & fromage", seasons: ["ete"], meat: false, cookeo: false, time: 30,
     cookeoNote: "",
     ing: [
       ["œufs", 6, "pièce", "pro"],
@@ -609,7 +609,7 @@ const SEED_RECIPES = [
   },
   {
     id: "r25", name: "Ratatouille au Cookeo, œufs au plat & quinoa",
-    category: "Œufs & fromage", seasons: ["ete"], fish: false, cookeo: true, time: 35,
+    category: "Œufs & fromage", seasons: ["ete"], meat: false, cookeo: true, time: 35,
     cookeoNote: "Dorer 5 min, puis sous pression 6 min.",
     ing: [
       ["aubergine", 1, "pièce", "leg"],
@@ -633,7 +633,7 @@ const SEED_RECIPES = [
   },
   {
     id: "r26", name: "Gratin de coquillettes au chou-fleur & comté",
-    category: "Œufs & fromage", seasons: AUT_HIV, fish: false, cookeo: true, time: 45,
+    category: "Œufs & fromage", seasons: AUT_HIV, meat: false, cookeo: true, time: 45,
     cookeoNote: "Chou-fleur à la vapeur dans le panier : sous pression 3 min.",
     ing: [
       ["coquillettes", 250, "g", "fec"],
@@ -654,7 +654,7 @@ const SEED_RECIPES = [
   },
   {
     id: "r27", name: "Quiche poireaux-chèvre (pâte maison) & salade",
-    category: "Œufs & fromage", seasons: AUT_HIV, fish: false, cookeo: false, time: 70,
+    category: "Œufs & fromage", seasons: AUT_HIV, meat: false, cookeo: false, time: 70,
     cookeoNote: "",
     ing: [
       ["farine T45", 200, "g", "fec"],
@@ -677,7 +677,7 @@ const SEED_RECIPES = [
   },
   {
     id: "r28", name: "Pâtes primavera, ricotta & citron",
-    category: "Œufs & fromage", seasons: ["printemps"], fish: false, cookeo: false, time: 25,
+    category: "Œufs & fromage", seasons: ["printemps"], meat: false, cookeo: false, time: 25,
     cookeoNote: "",
     ing: [
       ["spaghetti", 250, "g", "fec"],
@@ -700,7 +700,7 @@ const SEED_RECIPES = [
   },
   {
     id: "r29", name: "Tortilla de pommes de terre & salade verte",
-    category: "Œufs & fromage", seasons: ALL_SEASONS, fish: false, cookeo: false, time: 40,
+    category: "Œufs & fromage", seasons: ALL_SEASONS, meat: false, cookeo: false, time: 40,
     cookeoNote: "",
     ing: [
       ["pomme de terre", 700, "g", "leg"],
@@ -719,7 +719,7 @@ const SEED_RECIPES = [
   },
   {
     id: "r30", name: "Pizza maison aux légumes du soleil",
-    category: "Œufs & fromage", seasons: ["ete"], fish: false, cookeo: false, time: 60,
+    category: "Œufs & fromage", seasons: ["ete"], meat: false, cookeo: false, time: 60,
     cookeoNote: "",
     ing: [
       ["farine T65", 400, "g", "fec"],
@@ -742,81 +742,10 @@ const SEED_RECIPES = [
     notes: "Une part pour le midi, à réchauffer au four."
   },
 
-  /* ---------------------------- POISSON --------------------------- */
-  {
-    id: "r31", name: "Pâtes au maquereau / sardines, brocoli & citron",
-    category: "Poisson", seasons: ["printemps", "automne", "hiver"], fish: true, cookeo: false, time: 25,
-    cookeoNote: "",
-    ing: [
-      ["spaghetti", 250, "g", "fec"],
-      ["maquereau en conserve", 2, "boîte", "pro"],
-      ["sardines à l'huile", 1, "boîte", "pro"],
-      ["brocoli", 1, "pièce", "leg"],
-      ["citron", 1, "pièce", "leg"],
-      ["ail", 2, "gousse", "leg"],
-      ["câpres", 1, "c. à s.", "epi"],
-      ["piment d'Espelette", 1, "pincée", "spi"],
-      ["huile d'olive", 2, "c. à s.", "epi"]
-    ],
-    steps: [
-      "Cuire les pâtes, ajouter le brocoli en fleurettes les 4 dernières minutes.",
-      "Faire revenir l'ail dans l'huile avec les câpres, le zeste de citron et le piment.",
-      "Séparer en deux poêlées : maquereau émietté (2 portions pour elle : dîner + midi) et sardines (1 portion pour toi).",
-      "Mélanger avec les pâtes et un trait de jus de citron."
-    ],
-    notes: "Choisir des conserves issues de pêche durable (MSC, maquereau de ligne)."
-  },
-  {
-    id: "r32", name: "Maquereau & sardines grillés, tian de légumes & boulgour",
-    category: "Poisson", seasons: ["ete"], fish: true, cookeo: false, time: 50,
-    cookeoNote: "",
-    ing: [
-      ["maquereau frais", 2, "pièce", "pro"],
-      ["sardines fraîches", 5, "pièce", "pro"],
-      ["courgette", 2, "pièce", "leg"],
-      ["tomate", 500, "g", "leg"],
-      ["aubergine", 1, "pièce", "leg"],
-      ["oignon", 1, "pièce", "leg"],
-      ["citron", 1, "pièce", "leg"],
-      ["boulgour", 200, "g", "fec"],
-      ["herbes de Provence", 1, "c. à c.", "spi"],
-      ["huile d'olive", 3, "c. à s.", "epi"]
-    ],
-    steps: [
-      "Tian : rondelles de légumes alternées dans un plat, huile et herbes. 40 min à 190 °C.",
-      "Cuire le boulgour.",
-      "Griller le maquereau (2 portions pour elle) et les sardines (pour toi) 4 min par face.",
-      "Servir avec le citron."
-    ],
-    notes: "Saison : maquereau d'avril à septembre, sardines de mai à septembre."
-  },
-  {
-    id: "r33", name: "Pommes de terre, poireaux vinaigrette & maquereau / sardines",
-    category: "Poisson", seasons: AUT_HIV, fish: true, cookeo: true, time: 30,
-    cookeoNote: "Pommes de terre et poireaux dans le panier vapeur, sous pression 8 min.",
-    ing: [
-      ["pomme de terre", 800, "g", "leg"],
-      ["poireau", 4, "pièce", "leg"],
-      ["échalote", 1, "pièce", "leg"],
-      ["persil", 1, "botte", "leg"],
-      ["maquereau en conserve", 2, "boîte", "pro"],
-      ["sardines à l'huile", 1, "boîte", "pro"],
-      ["moutarde", 1, "c. à s.", "spi"],
-      ["vinaigre de cidre", 2, "c. à s.", "epi"],
-      ["huile de colza", 3, "c. à s.", "epi"]
-    ],
-    steps: [
-      "Cuire pommes de terre et poireaux (en tronçons) à la vapeur.",
-      "Vinaigrette : moutarde, vinaigre, huile, échalote ciselée, persil.",
-      "Servir tiède avec le maquereau (pour elle, 2 portions) et les sardines (pour toi)."
-    ],
-    notes: "Se transporte très bien pour le midi."
-  },
-
   /* ------------------------- BASES & PÂTES ------------------------ */
   {
     id: "r34", since: 2, name: "Pâte brisée maison (pour quiche ou tarte)",
-    category: "Bases & pâtes", seasons: ALL_SEASONS, fish: false, cookeo: false, time: 15,
+    category: "Bases & pâtes", seasons: ALL_SEASONS, meat: false, cookeo: false, time: 15,
     cookeoNote: "",
     ing: [
       ["farine T45", 250, "g", "fec"],

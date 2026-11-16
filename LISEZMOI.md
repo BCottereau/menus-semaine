@@ -79,7 +79,7 @@ de base : elles ne sont pas proposées comme dîner.
 ## Utilisation au fil de la semaine
 
 - **Dimanche soir** (Semaine) : la semaine suivante s'affiche. Choisir un dîner par
-  jour (filtres saison / catégorie / poisson / Cookeo) ou « ✨ Compléter les jours vides ».
+  jour (filtres saison / catégorie / végé ou viande / Cookeo) ou « ✨ Compléter les jours vides ».
 - **Lundi** (Courses) : liste par rayon avec cases à cocher ; copier / partager / .txt.
   « Ranger les articles cochés au garde-manger » après les courses.
 - **Chaque soir** : « Marquer cuisiné » déduit les ingrédients du garde-manger

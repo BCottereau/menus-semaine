@@ -80,6 +80,7 @@ function normalizeState(s) {
   }
   s.recipes.forEach(r => {
     delete r.updatedAt;
+    if ("fish" in r) { r.meat = !!(r.meat || r.fish); delete r.fish; } // ancien champ « poisson »
     r.seasons = Array.isArray(r.seasons) && r.seasons.length ? r.seasons : ALL_SEASONS.slice();
     r.ingredients = Array.isArray(r.ingredients) ? r.ingredients : [];
     r.steps = Array.isArray(r.steps) ? r.steps : [];
@@ -219,7 +220,7 @@ function seedRecipes(keepSince = false) {
         name: r.name,
         category: r.category,
         seasons: r.seasons.slice(),
-        fish: !!r.fish,
+        meat: !!r.meat,
         cookeo: !!r.cookeo,
         cookeoNote: r.cookeoNote || "",
         time: r.time || 30,

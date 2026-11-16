@@ -124,8 +124,8 @@ const ui = {
   weekStart: defaultWeekStart(),
   pickerDay: null,
   filters: {
-    recipes: { q: "", season: "", cat: "", fish: "", cookeo: false },
-    picker: { q: "", season: "current", cat: "", fish: "", cookeo: false }
+    recipes: { q: "", season: "", cat: "", meat: "", cookeo: false },
+    picker: { q: "", season: "current", cat: "", meat: "", cookeo: false }
   },
   ideas: { ignoreBasics: true, maxMissing: 3, seasonOnly: false },
   showCovered: false,
@@ -294,8 +294,8 @@ function matchesFilters(r, f, seasonCtx) {
   const s = f.season === "current" ? seasonCtx : f.season;
   if (s && !r.seasons.includes(s)) return false;
   if (f.cat && r.category !== f.cat) return false;
-  if (f.fish === "non" && r.fish) return false;
-  if (f.fish === "oui" && !r.fish) return false;
+  if (f.meat === "non" && r.meat) return false;
+  if (f.meat === "oui" && !r.meat) return false;
   if (f.cookeo && !r.cookeo) return false;
   return true;
 }
@@ -313,10 +313,10 @@ function filterBar(scope, seasonCtx) {
       ${opt("", "Toutes catégories", f.cat)}
       ${allCategories().map(c => opt(c, c, f.cat)).join("")}
     </select>
-    <select data-filter="fish" aria-label="Poisson">
-      ${opt("", "Poisson : indifférent", f.fish)}
-      ${opt("non", "🌿 Sans poisson", f.fish)}
-      ${opt("oui", "🐟 Avec poisson", f.fish)}
+    <select data-filter="meat" aria-label="Végétarien ou avec viande">
+      ${opt("", "Végé ou avec viande", f.meat)}
+      ${opt("non", "🌿 Végé (pour nous deux)", f.meat)}
+      ${opt("oui", "🍖 Avec viande · Baptiste", f.meat)}
     </select>
     <label class="chk"><input type="checkbox" data-filter="cookeo" ${f.cookeo ? "checked" : ""}> Cookeo</label>
   </div>`;
@@ -327,7 +327,7 @@ function badges(r) {
   return `<span class="badge cat">${esc(r.category)}</span>`
     + `<span class="badge season">${seasons}</span>`
     + (r.cookeo ? `<span class="badge cookeo">Cookeo</span>` : "")
-    + (r.fish ? `<span class="badge fish">🐟 Poisson</span>` : `<span class="badge veg">🌿 Végé</span>`);
+    + (r.meat ? `<span class="badge meat">🍖 Avec viande · Baptiste</span>` : `<span class="badge veg">🌿 Végé</span>`);
 }
 
 /* ------------------------------- Rendu ---------------------------------- */
@@ -369,7 +369,7 @@ function renderWeek() {
   const today = iso(new Date());
   const recipes = w.days.map(id => id && getRecipe(id));
   const n = recipes.filter(Boolean).length;
-  const nFish = recipes.filter(r => r && r.fish).length;
+  const nMeat = recipes.filter(r => r && r.meat).length;
   const nCookeo = recipes.filter(r => r && r.cookeo).length;
 
   const days = DAYS.map((d, i) => {
@@ -406,7 +406,7 @@ function renderWeek() {
 
   $("#tab-week").innerHTML = `
     ${weekNav()}
-    <p class="summary">${n}/7 dîners planifiés · ${nFish} avec poisson · ${nCookeo} au Cookeo</p>
+    <p class="summary">${n}/7 dîners planifiés${nMeat ? ` · ${nMeat} avec viande (Baptiste)` : ""} · ${nCookeo} au Cookeo</p>
     <div class="days">${days}</div>
     ${sidesCard(w)}
     <div class="toolbar">
@@ -414,7 +414,7 @@ function renderWeek() {
       <button class="btn" data-action="goto" data-tab="shopping">🛒 Liste de courses</button>
       <button class="btn ghost" data-action="clear-week">Vider la semaine</button>
     </div>
-    <p class="hint">Astuce : « Compléter » choisit des recettes de saison qui n'ont pas été faites depuis au moins ${RECENT_WEEKS} semaines (2 poissons maximum par semaine). « Marquer cuisiné » déduit les ingrédients du garde-manger.</p>`;
+    <p class="hint">Astuce : « Compléter » choisit des recettes de saison qui n'ont pas été faites depuis au moins ${RECENT_WEEKS} semaines (jamais de recette avec viande). « Marquer cuisiné » déduit les ingrédients du garde-manger.</p>`;
 }
 
 function sidesCard(w) {
@@ -496,14 +496,13 @@ function autofill() {
   const season = seasonOf(parseIso(ws));
   const used = new Set(w.days.filter(Boolean));
   const catCount = {};
-  let fish = 0;
-  w.days.forEach(id => { const r = getRecipe(id); if (r) { catCount[r.category] = (catCount[r.category] || 0) + 1; if (r.fish) fish++; } });
+  w.days.forEach(id => { const r = getRecipe(id); if (r) catCount[r.category] = (catCount[r.category] || 0) + 1; });
   let filled = 0;
   for (let i = 0; i < 7; i++) {
     if (w.days[i]) continue;
-    const base = state.recipes.filter(r => isDinner(r) && r.seasons.includes(season) && !used.has(r.id));
-    const strict = base.filter(r => (!r.fish || fish < 2) && (catCount[r.category] || 0) < 2 && lastMadeInfo(r.id, ws).age > RECENT_WEEKS);
-    const pool = strict.length ? strict : base.length ? base : state.recipes.filter(r => isDinner(r) && !used.has(r.id));
+    const base = state.recipes.filter(r => isDinner(r) && !r.meat && r.seasons.includes(season) && !used.has(r.id));
+    const strict = base.filter(r => (catCount[r.category] || 0) < 2 && lastMadeInfo(r.id, ws).age > RECENT_WEEKS);
+    const pool = strict.length ? strict : base.length ? base : state.recipes.filter(r => isDinner(r) && !r.meat && !used.has(r.id));
     if (!pool.length) break;
     const pick = pool
       .map(r => ({ r, score: Math.min(lastMadeInfo(r.id, ws).age, 12) + Math.random() * 6 }))
@@ -511,7 +510,6 @@ function autofill() {
     w.days[i] = pick.id;
     used.add(pick.id);
     catCount[pick.category] = (catCount[pick.category] || 0) + 1;
-    if (pick.fish) fish++;
     filled++;
   }
   save(); render();
@@ -641,7 +639,7 @@ function viewRecipe(id) {
     <div class="badges">${badges(r)}</div>
     <p class="small muted">${esc(yieldText(r))} · ⏱ ${r.time} min · ${info.txt}</p>
     ${r.cookeo ? `<div class="cookeo-box"><strong>🍲 Cookeo :</strong> ${esc(r.cookeoNote || "recette adaptée au Cookeo.")}</div>` : ""}
-    ${r.fish ? `<div class="fish-box">🐟 Maquereau pour elle (2 portions : dîner + déjeuner), sardines pour toi (1 portion).</div>` : ""}
+    ${r.meat ? `<div class="meat-box">🍖 Recette avec viande ou poisson : pour Baptiste.</div>` : ""}
     <h3>Ingrédients <small class="muted">(${esc(yieldText(r))})</small></h3>
     <ul class="ing-list">${r.ingredients.map(i => `<li><span>${esc(i.name)}</span><span class="muted">${esc(isNum(i.qty) ? fmtQty(i.qty, i.unit) : "selon goût")}</span></li>`).join("")}</ul>
     <h3>Préparation</h3>
@@ -677,7 +675,7 @@ function ingRow(i = { name: "", qty: "", unit: "g", aisle: "leg" }) {
 function editRecipe(id, asCopy = false) {
   const src = id ? getRecipe(id) : null;
   const r = src ? clone(src) : {
-    id: null, name: "", category: CATEGORIES[0], seasons: [seasonOf()], fish: false, cookeo: false,
+    id: null, name: "", category: CATEGORIES[0], seasons: [seasonOf()], meat: false, cookeo: false,
     cookeoNote: "", time: 30, ingredients: [{ name: "", qty: "", unit: "g", aisle: "leg" }], steps: [], notes: ""
   };
   if (asCopy) { r.id = null; r.name += " (copie)"; }
@@ -695,7 +693,7 @@ function editRecipe(id, asCopy = false) {
         ${Object.keys(SEASON_LABELS).map(s => `<label class="chk"><input type="checkbox" name="season" value="${s}" ${r.seasons.includes(s) ? "checked" : ""}> ${SEASON_ICONS[s]} ${SEASON_LABELS[s]}</label>`).join("")}
       </fieldset>
       <div class="row">
-        <label class="chk"><input type="checkbox" name="fish" ${r.fish ? "checked" : ""}> 🐟 Contient du poisson</label>
+        <label class="chk"><input type="checkbox" name="meat" ${r.meat ? "checked" : ""}> 🍖 Avec viande ou poisson (Baptiste)</label>
         <label class="chk"><input type="checkbox" name="cookeo" ${r.cookeo ? "checked" : ""}> 🍲 Cookeo</label>
       </div>
       <label>Programme Cookeo (si pertinent)<input name="cookeoNote" value="${esc(r.cookeoNote)}" placeholder="ex : Dorer 3 min puis sous pression 10 min"></label>
@@ -729,7 +727,7 @@ function saveRecipeForm(form) {
     name: fd.get("name").trim(),
     category: fd.get("category"),
     seasons,
-    fish: fd.get("fish") === "on",
+    meat: fd.get("meat") === "on",
     cookeo: fd.get("cookeo") === "on",
     cookeoNote: fd.get("cookeoNote").trim(),
     time: parseInt(fd.get("time"), 10) || 0,
@@ -970,7 +968,7 @@ function normalizeRecipe(o) {
     name: String(o.name).trim(),
     category: String(o.category || "Légumineuses"),
     seasons: seasons.length ? seasons : ALL_SEASONS.slice(),
-    fish: !!o.fish,
+    meat: !!(o.meat || o.fish),
     cookeo: !!o.cookeo,
     cookeoNote: String(o.cookeoNote || ""),
     time: parseInt(o.time, 10) || 30,

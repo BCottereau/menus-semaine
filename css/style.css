@@ -161,7 +161,7 @@ legend { font-size: .9rem; color: var(--muted); padding: 0 4px; }
 .badge { font-size: .72rem; padding: 2px 8px; border-radius: 99px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
 .badge.cat { background: var(--accent-soft); color: var(--accent); }
 .badge.cookeo { background: var(--cookeo-soft); color: var(--cookeo); }
-.badge.fish { background: var(--fish-soft); color: var(--fish); }
+.badge.meat { background: var(--fish-soft); color: var(--fish); }
 .badge.veg { background: var(--accent-soft); color: var(--accent); }
 .badge.warn { background: var(--warn-soft); color: var(--warn); }
 .badge.today-badge { background: var(--accent); color: var(--accent-text); }
@@ -277,7 +277,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
 .note { background: var(--surface-2); padding: 10px 12px; border-radius: 10px; font-size: .92rem; }
 .cookeo-box { background: var(--cookeo-soft); color: var(--text); padding: 10px 12px; border-radius: 10px; margin: 8px 0; font-size: .92rem; }
 .cookeo-box strong { color: var(--cookeo); }
-.fish-box { background: var(--fish-soft); padding: 10px 12px; border-radius: 10px; margin: 8px 0; font-size: .92rem; }
+.meat-box { background: var(--fish-soft); padding: 10px 12px; border-radius: 10px; margin: 8px 0; font-size: .92rem; }
 .add-to-week { background: var(--surface-2); box-shadow: none; }
 .ing-row { display: grid; grid-template-columns: 1fr 70px 34px; grid-template-areas: "name qty del" "unit aisle aisle"; gap: 6px; padding: 8px 0; border-bottom: 1px dashed var(--line); }
 .ing-row [name=iname] { grid-area: name; }
