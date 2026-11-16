@@ -28,7 +28,7 @@ menus-donnees/          (dépôt privé → données)
 
 ## Ouvrir l'application
 
-Adresse (une fois GitHub Pages activé) : `https://<compte>.github.io/menus-semaine/`
+Adresse (une fois GitHub Pages activé) : `https://bcottereau.github.io/menus-semaine/`
 
 - **Mac** : ouvrir l'adresse dans Safari. Pour l'avoir dans le Dock : Safari → Fichier →
   « Ajouter au Dock ».

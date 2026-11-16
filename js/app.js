@@ -886,7 +886,7 @@ function openSyncSettings() {
       <div class="modal-head"><h2>☁️ Synchronisation</h2><button type="button" class="icon-btn" data-action="close" aria-label="Fermer">✕</button></div>
       <p class="small" id="syncState">${esc(syncStatusText())}</p>
       <p class="hint">Les données sont enregistrées dans un fichier d'un dépôt GitHub <strong>privé</strong>. Chaque appareil configuré (Mac, téléphone) lit et écrit ce fichier ; les modifications sont fusionnées automatiquement.</p>
-      <label>Compte GitHub<input name="owner" value="${esc(c.owner || "")}" placeholder="ex : KoteroStudio" required autocapitalize="off"></label>
+      <label>Compte GitHub<input name="owner" value="${esc(c.owner || "")}" placeholder="ex : BCottereau" required autocapitalize="off"></label>
       <label>Dépôt privé des données<input name="repo" value="${esc(c.repo || "")}" placeholder="ex : menus-donnees" required autocapitalize="off"></label>
       <label>Fichier<input name="path" value="${esc(c.path || "menus.json")}" autocapitalize="off"></label>
       <label>Clé d'accès (fine-grained token)<input name="token" type="password" placeholder="${c.token ? "•••••••• (enregistrée — laisser vide pour la garder)" : "github_pat_…"}" ${c.token ? "" : "required"} autocapitalize="off" spellcheck="false"></label>
