@@ -6,7 +6,6 @@
 /* ----------------------------- Constantes ----------------------------- */
 const DAYS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
 const SEASON_LABELS = { printemps: "Printemps", ete: "Été", automne: "Automne", hiver: "Hiver" };
-const SEASON_ICONS = { printemps: "🌱", ete: "☀️", automne: "🍂", hiver: "❄️" };
 const UNITS = ["g", "kg", "ml", "cl", "l", "pièce", "gousse", "botte", "brin", "feuille", "cube", "boîte",
   "sachet", "tranche", "c. à s.", "c. à c.", "pincée", "poignée"];
 const COUNTABLE = new Set(["pièce", "gousse", "botte", "brin", "feuille", "cube", "boîte", "sachet", "tranche", "pincée", "poignée"]);
@@ -168,7 +167,7 @@ function lastMadeInfo(rid, ws) {
   return { txt: n === 1 ? "cuisiné la semaine dernière" : `cuisiné il y a ${n} semaines`, warn: n <= RECENT_WEEKS, age: n };
 }
 
-/* ------------------------------ Garde-manger ---------------------------- */
+/* -------------------------------- Placard -------------------------------- */
 function findPantry(name, baseUnit) {
   const k = matchKey(name);
   const cands = state.pantry.filter(p => namesMatch(matchKey(p.name), k));
@@ -193,7 +192,7 @@ function addToPantry(name, qty, unit, fuzzy = false) {
   if (pb.u === b.u) { p.qty = pb.q + b.q; p.unit = pb.u; }
   else state.pantry.push({ id: uid(), name, qty: b.q, unit: b.u, addedAt: iso(new Date()) });
 }
-/** Déduit les ingrédients d'une recette des quantités suivies au garde-manger. */
+/** Déduit les ingrédients d'une recette des quantités suivies au placard. */
 function deductFromPantry(r) {
   const log = [], msgs = [];
   for (const ing of r.ingredients) {
@@ -245,7 +244,7 @@ function computeShopping(ws) {
   for (const it of map.values()) {
     const p = findPantry(it.name, it.unit);
     if (!p) { toBuy.push(it); continue; }
-    if (!isNum(p.qty)) { covered.push({ ...it, note: "au garde-manger" }); continue; }
+    if (!isNum(p.qty)) { covered.push({ ...it, note: "au placard" }); continue; }
     const pb = toBase(p.qty, p.unit);
     if (it.qty === null) {
       (pb.q > 0 ? covered : toBuy).push({ ...it, note: pb.q > 0 ? `stock : ${fmtQty(pb.q, pb.u)}` : `${p.name} épuisé` });
@@ -254,7 +253,7 @@ function computeShopping(ws) {
       if (rest <= 0) covered.push({ ...it, note: `stock : ${fmtQty(pb.q, pb.u)}` });
       else toBuy.push({ ...it, qty: rest, note: pb.q > 0 ? `besoin ${fmtQty(it.qty, it.unit)} − stock ${fmtQty(pb.q, pb.u)}` : `${p.name} épuisé` });
     } else {
-      toBuy.push({ ...it, note: `au garde-manger : ${fmtQty(p.qty, p.unit)} — à vérifier` });
+      toBuy.push({ ...it, note: `au placard : ${fmtQty(p.qty, p.unit)}, à vérifier` });
     }
   }
   for (const x of w.extras) {
@@ -622,7 +621,7 @@ function markCooked(i) {
   const r = getRecipe(w.days[i]);
   if (!r) return;
   if (w.cooked[i]) {
-    if (!confirm("Annuler « cuisiné » ? Les quantités déduites seront remises au garde-manger.")) return;
+    if (!confirm("Annuler « cuisiné » ? Les quantités déduites seront remises au placard.")) return;
     restoreToPantry(w.cookLog[i]);
     w.cooked[i] = false;
     delete w.cookLog[i];
@@ -919,7 +918,7 @@ function saveRecipeForm(form) {
     save(); closeModal();
   } else viewRecipe(r.id);
   render();
-  toast("Recette enregistrée ✓");
+  toast("Recette enregistrée");
 }
 
 /* ---------- Onglet Placard ---------- */
@@ -1185,9 +1184,9 @@ function syncStatusText() {
     case "off": return "Synchronisation désactivée : les données restent sur cet appareil.";
     case "pending": return "Modifications en attente d'envoi…";
     case "syncing": return "Synchronisation en cours…";
-    case "ok": return `✓ Synchronisé avec ${Sync.cfg.owner}/${Sync.cfg.repo}${t}`;
+    case "ok": return `Synchronisé avec ${Sync.cfg.owner}/${Sync.cfg.repo}${t}`;
     case "offline": return `Hors ligne. ${Sync.message}`;
-    default: return `⚠️ ${Sync.message}`;
+    default: return `Problème : ${Sync.message}`;
   }
 }
 function updateSyncBadge() {
@@ -1209,7 +1208,7 @@ function openSyncSettings() {
   const local = location.protocol === "file:";
   openModal(`
     <form id="syncForm" autocomplete="off">
-      <div class="modal-head"><h2>☁️ Synchronisation</h2><button type="button" class="icon-btn" data-action="close" aria-label="Fermer">✕</button></div>
+      <div class="modal-head"><h2>Synchronisation</h2><button type="button" class="icon-btn" data-action="close" aria-label="Fermer">${icon("x", 22)}</button></div>
       <p class="small" id="syncState">${esc(syncStatusText())}</p>
       <p class="hint">Les données sont enregistrées dans un fichier d'un dépôt GitHub <strong>privé</strong>. Chaque appareil configuré (Mac, téléphone) lit et écrit ce fichier ; les modifications sont fusionnées automatiquement.</p>
       <label>Compte GitHub<input name="owner" value="${esc(c.owner || "")}" placeholder="ex : BCottereau" required autocapitalize="off"></label>
@@ -1223,10 +1222,10 @@ function openSyncSettings() {
         <button type="submit" class="btn primary">Enregistrer et synchroniser</button>
       </div>
       ${Sync.enabled() ? `<div class="card add-to-week">
-        <strong>📱 Configurer le téléphone en un clic</strong>
+        <strong>Configurer le téléphone en un clic</strong>
         <p class="small">Copiez ce lien et ouvrez-le sur le téléphone (AirDrop, Notes…). Il contient votre clé : ne le partagez avec personne.</p>
         ${local ? `<p class="small warn-text">Vous utilisez la version ouverte depuis un fichier local : ouvrez plutôt l'adresse GitHub Pages pour que le lien fonctionne sur le téléphone.</p>` : ""}
-        <button type="button" class="btn" data-action="sync-copy-link">🔗 Copier le lien de configuration</button>
+        <button type="button" class="btn" data-action="sync-copy-link">${icon("copy", 18)} Copier le lien de configuration</button>
       </div>` : ""}
     </form>`);
 }
@@ -1282,7 +1281,7 @@ function importPastedRecipes(form) {
   }
   save(); render();
   if (list.length === 1) viewRecipe(list[0].id); else closeModal();
-  toast(`${list.length} recette(s) importée(s) ✓`);
+  toast(`${list.length} recette(s) importée(s)`);
 }
 
 /* ------------------------------ Modale / toast --------------------------- */
@@ -1341,18 +1340,18 @@ const ACTIONS = {
 
   "pick-day": el => openPicker(+el.dataset.day),
   "pick-side": () => openPicker(null, true),
-  "add-side": el => { addSide(el.dataset.id); closeModal(); toast("Ajouté à la semaine ✓"); },
+  "add-side": el => { addSide(el.dataset.id); closeModal(); toast("Ajouté à la semaine"); },
   "side-cooked": el => {
     const w = ensureWeek(ui.weekStart), x = w.sides.find(s => s.id === el.dataset.id);
     const r = x && getRecipe(x.r);
     if (!r) return;
     if (x.c) {
-      if (!confirm("Annuler « fait » ? Les quantités déduites seront remises au garde-manger.")) return;
+      if (!confirm("Annuler « fait » ? Les quantités déduites seront remises au placard.")) return;
       restoreToPantry(x.l); x.c = false; x.l = null;
     } else {
       const { log, msgs } = deductFromPantry(r);
       x.c = true; x.l = log;
-      toast(msgs.length ? "Garde-manger mis à jour — " + msgs.join(" · ") : "Miam ! 😋");
+      toast(msgs.length ? "Placard mis à jour : " + msgs.join(" · ") : "C'est noté");
     }
     save(); render();
   },
@@ -1401,7 +1400,7 @@ const ACTIONS = {
     const w = ensureWeek(ui.weekStart);
     w.days[i] = el.dataset.id; w.cooked[i] = false;
     save(); closeModal(); render();
-    toast(`Ajouté au ${DAYS[i].toLowerCase()} ✓`);
+    toast(`Ajouté au ${DAYS[i].toLowerCase()}`);
   },
   "add-ing-row": () => $("#ingRows").insertAdjacentHTML("beforeend", ingRow()),
   "del-ing-row": el => el.closest(".ing-row").remove(),
@@ -1520,7 +1519,7 @@ const ACTIONS = {
     save(); render(); toast("Recettes de départ restaurées.");
   },
   "wipe-all": () => {
-    if (!confirm("Effacer TOUTES les données (recettes, plannings, garde-manger) ?" + (Sync.enabled() ? "\nAttention : l'effacement sera aussi appliqué sur vos autres appareils synchronisés." : ""))) return;
+    if (!confirm("Effacer TOUTES les données (recettes, plannings, placard) ?" + (Sync.enabled() ? "\nAttention : l'effacement sera aussi appliqué sur vos autres appareils synchronisés." : ""))) return;
     state = Store.fresh(); save(); render(); toast("Données réinitialisées.");
   }
 };
@@ -1581,7 +1580,7 @@ document.addEventListener("change", e => {
         const data = JSON.parse(reader.result);
         if (!Array.isArray(data.recipes)) throw new Error("format");
         if (!confirm("Remplacer toutes les données actuelles par celles du fichier ?")) return;
-        state = Store.migrate(data); save(); render(); toast("Données importées ✓");
+        state = Store.migrate(data); save(); render(); toast("Données importées");
       } catch (err) { alert("Fichier invalide."); }
       t.value = "";
     };
