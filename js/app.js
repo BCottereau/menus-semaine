@@ -376,78 +376,149 @@ function weekNav() {
 }
 
 /* ---------- Onglet Semaine ---------- */
+const DAY_SHORT = ["Lun.", "Mar.", "Mer.", "Jeu.", "Ven.", "Sam.", "Dim."];
+const BASICS = new Set(["sel", "poivre", "huile d'olive", "huile de colza", "eau", "sel et poivre"].map(matchKey));
+const isBasic = ing => ing.aisle === "spi" || BASICS.has(matchKey(ing.name));
+
+/** Ingrédients de la recette présents au placard (stock non nul), « à consommer vite » d'abord. */
+function pantryHits(r) {
+  const hits = [];
+  for (const ing of r.ingredients) {
+    if (isBasic(ing)) continue;
+    const b = isNum(ing.qty) ? toBase(ing.qty, ing.unit) : { q: null, u: "" };
+    const p = findPantry(ing.name, b.u);
+    if (!p || (isNum(p.qty) && +p.qty <= 0)) continue;
+    if (!hits.some(h => h.p === p)) hits.push({ p, name: ing.name, soon: !!p.soon });
+  }
+  return hits.sort((a, b) => b.soon - a.soon);
+}
+const joinFr = arr => arr.length <= 1 ? (arr[0] || "") : arr.slice(0, -1).join(", ") + " et " + arr[arr.length - 1];
+
+/** Pourquoi cette recette est proposée : placard, saison, ancienneté. */
+function reasonFor(r, ws) {
+  const parts = [];
+  const hits = pantryHits(r);
+  if (hits.length) {
+    const soon = hits.filter(h => h.soon).map(h => h.name);
+    parts.push(soon.length ? `Utilise vite : ${joinFr(soon.slice(0, 2))}` : `Utilise ton placard : ${joinFr(hits.slice(0, 2).map(h => h.name))}`);
+  }
+  const season = activeSeason(parseIso(ws));
+  if (r.seasons.length < 4 && r.seasons.includes(season)) parts.push("de saison");
+  const age = lastMadeInfo(r.id, ws).age;
+  if (age === 999) parts.push("nouvelle recette");
+  else if (age >= 6 && age < 999) parts.push(`pas faite depuis ${age} sem.`);
+  return parts.join(" · ");
+}
+
+/** Note une recette candidate pour le jour i (plus c'est haut, mieux c'est). */
+function proposalScore(r, w, i, ws) {
+  // Un ingrédient du placard déjà utilisé par un autre jour compte beaucoup moins.
+  const taken = new Set();
+  w.days.forEach((id, k) => { const o = k !== i && id && getRecipe(id); if (o) pantryHits(o).forEach(h => taken.add(h.p)); });
+  const hits = pantryHits(r);
+  const age = lastMadeInfo(r.id, ws).age;
+  let score = Math.min(age, 12) * 0.5;
+  for (const h of hits) if (!taken.has(h.p)) score += h.soon ? 9 : 3;
+  const neighbours = [w.days[i - 1], w.days[i + 1]].map(id => id && getRecipe(id)).filter(Boolean);
+  if (neighbours.some(n => n.category === r.category)) score -= 8;
+  const sameCat = w.days.filter((id, k) => k !== i && id && getRecipe(id) && getRecipe(id).category === r.category).length;
+  if (sameCat >= 2) score -= 6;
+  return score + Math.random() * 2;
+}
+/** Recettes éligibles aux propositions automatiques (jamais de viande ni de programme sportif). */
+function proposalPool(w, ws, exclude = []) {
+  const season = activeSeason(parseIso(ws));
+  const used = new Set([...w.days.filter(Boolean), ...exclude]);
+  const base = state.recipes.filter(r => isDinner(r) && !r.meat && !MANUAL_ONLY.includes(r.category) && !used.has(r.id));
+  const seasonal = base.filter(r => r.seasons.includes(season));
+  const fresh = seasonal.filter(r => lastMadeInfo(r.id, ws).age > RECENT_WEEKS);
+  return fresh.length ? fresh : seasonal.length ? seasonal : base;
+}
+function bestFor(w, i, ws, exclude = []) {
+  const pool = proposalPool(w, ws, exclude);
+  if (!pool.length) return null;
+  return pool.map(r => ({ r, s: proposalScore(r, w, i, ws) })).sort((a, b) => b.s - a.s)[0].r;
+}
+
 function renderWeek() {
   const ws = ui.weekStart, w = getWeek(ws), start = parseIso(ws);
   const today = iso(new Date());
   const recipes = w.days.map(id => id && getRecipe(id));
   const n = recipes.filter(Boolean).length;
-  const nMeat = recipes.filter(r => r && r.meat).length;
   const nCookeo = recipes.filter(r => r && r.cookeo).length;
+  const end = addDays(start, 6);
+  const sameMonth = start.getMonth() === end.getMonth();
+  const range = `${start.getDate()}${sameMonth ? "" : " " + frDate(start, { month: "short" })} → ${end.getDate()} ${frDate(end, { month: "short" })}`;
 
   const days = DAYS.map((d, i) => {
     const date = addDays(start, i);
+    const isToday = iso(date) === today;
+    const label = `${DAY_SHORT[i]} ${date.getDate()}`;
     const r = recipes[i];
-    let body;
-    if (r) {
-      const info = lastMadeBefore(r.id, ws);
-      const age = info ? weeksBetween(info, ws) : null;
-      const dup = w.days.filter(x => x === r.id).length > 1;
-      body = `<div class="day-recipe">
-        <button class="recipe-link" data-action="view" data-id="${r.id}">${esc(r.name)}</button>
-        <div class="badges">${badges(r)}
-          ${dup ? `<span class="badge warn">⚠️ 2 fois cette semaine</span>` : ""}
-          ${age !== null && age <= RECENT_WEEKS ? `<span class="badge warn">⚠️ fait il y a ${age} sem.</span>` : ""}
-        </div>
-        <div class="day-actions">
-          <button class="btn small" data-action="pick-day" data-day="${i}">Changer</button>
-          <button class="btn small ghost" data-action="clear-day" data-day="${i}">Retirer</button>
-          <button class="btn small ${w.cooked[i] ? "ok" : "outline"}" data-action="toggle-cooked" data-day="${i}">${w.cooked[i] ? "✓ Cuisiné" : "Marquer cuisiné"}</button>
-        </div>
-        <p class="lunch">🥡 3 portions : dîner à deux + déjeuner de demain</p>
-      </div>`;
-    } else if (w.days[i]) {
-      body = `<p class="muted">Recette supprimée.</p><button class="add-day" data-action="pick-day" data-day="${i}">＋ Choisir un dîner</button>`;
-    } else {
-      body = `<button class="add-day" data-action="pick-day" data-day="${i}">＋ Choisir un dîner</button>`;
+    if (!r) {
+      return `<li><button class="day-empty ${isToday ? "today" : ""}" data-action="pick-day" data-day="${i}" aria-label="${d} ${date.getDate()} : choisir un dîner">
+        <span class="de-day">${label}${isToday ? ` <span class="pill-today">Aujourd'hui</span>` : ""}</span>
+        <span class="de-add">${icon("plus", 18)} Choisir</span></button></li>`;
     }
-    return `<article class="day ${iso(date) === today ? "today" : ""} ${w.cooked[i] ? "cooked" : ""}">
-      <div class="day-head"><strong>${d}</strong><span class="muted">${frDate(date, { day: "numeric", month: "short" })}</span>${iso(date) === today ? `<span class="badge today-badge">Aujourd'hui</span>` : ""}</div>
-      ${body}
-    </article>`;
+    const cooked = !!w.cooked[i];
+    const lastAge = lastMadeBefore(r.id, ws);
+    const age = lastAge ? weeksBetween(lastAge, ws) : null;
+    const dup = w.days.filter(x => x === r.id).length > 1;
+    const warn = dup ? "Prévu 2 fois cette semaine" : (age !== null && age <= RECENT_WEEKS ? `Déjà fait il y a ${age} sem.` : "");
+    const reason = cooked ? "" : reasonFor(r, ws);
+    return `<li><article class="day-card ${isToday ? "today" : ""} ${cooked ? "cooked" : ""}" aria-label="${d} ${date.getDate()}">
+      <div class="dc-top"><span class="dc-day">${label}</span>${isToday ? `<span class="pill-today">Aujourd'hui</span>` : ""}
+</div>
+      <button class="dc-title" data-action="view" data-id="${r.id}">${esc(r.name)}</button>
+      ${reason ? `<p class="dc-reason">${esc(reason)}</p>` : ""}
+      ${warn ? `<p class="dc-warn">${icon("alert", 14)} ${warn}</p>` : ""}
+      <div class="dc-actions">
+        <button class="btn small ${cooked ? "ok" : ""}" data-action="toggle-cooked" data-day="${i}" aria-pressed="${cooked}">${icon("check", 16)} ${cooked ? "Cuisiné" : "Marquer cuisiné"}</button>
+        <span class="dc-icons">
+          ${cooked ? "" : `<button class="icon-btn" data-action="swap-day" data-day="${i}" aria-label="Changer de recette (proposer une alternative)" title="Proposer une autre recette">${icon("refresh", 20)}</button>`}
+          <button class="icon-btn" data-action="pick-day" data-day="${i}" aria-label="Choisir une recette dans la liste" title="Choisir dans la liste">${icon("list", 20)}</button>
+          <button class="icon-btn" data-action="clear-day" data-day="${i}" aria-label="Retirer ce dîner" title="Retirer">${icon("x", 20)}</button>
+        </span>
+      </div>
+    </article></li>`;
   }).join("");
 
+  const missing = 7 - n;
   $("#tab-week").innerHTML = `
-    ${weekNav()}
-    <p class="summary">${n}/7 dîners planifiés${nMeat ? ` · ${nMeat} avec viande (Baptiste)` : ""} · ${nCookeo} au Cookeo</p>
-    <div class="days">${days}</div>
+    <div class="page-head"><div><h1 id="h-week">Semaine</h1>
+      <p class="sub">${weekLabel(ws)}${ws !== defaultWeekStart() ? ` · <button class="link inline" data-action="week-today">revenir à la semaine à planifier</button>` : ""}</p></div></div>
+    <div class="week-bar">
+      <button class="round-btn" data-action="week-prev" aria-label="Semaine précédente">${icon("chevronLeft", 22)}</button>
+      <div class="wb-center"><strong>${range}</strong><span class="wb-count">${n}/7 dîners${nCookeo ? ` · ${nCookeo} Cookeo` : ""}</span></div>
+      <button class="round-btn" data-action="week-next" aria-label="Semaine suivante">${icon("chevronRight", 22)}</button>
+    </div>
+    <div class="progress week-progress" role="progressbar" aria-label="Dîners planifiés" aria-valuemin="0" aria-valuemax="7" aria-valuenow="${n}"><span style="width:${Math.round(n / 7 * 100)}%"></span></div>
+    ${missing ? `<button class="propose-btn" data-action="propose">${icon("sparkles", 24)}
+      <span><strong>Proposer ${missing === 1 ? "le dîner restant" : `les ${missing} dîners restants`}</strong>
+      <small>Selon ton placard, la saison et vos goûts</small></span></button>` : ""}
+    <ul class="days-list">${days}</ul>
     ${sidesCard(w)}
     <div class="toolbar">
-      <button class="btn primary" data-action="autofill">✨ Compléter les jours vides</button>
-      <button class="btn" data-action="goto" data-tab="shopping">🛒 Liste de courses</button>
-      <button class="btn ghost" data-action="clear-week">Vider la semaine</button>
-    </div>
-    <p class="hint">Astuce : « Compléter » choisit des recettes de saison qui n'ont pas été faites depuis au moins ${RECENT_WEEKS} semaines (ni recette avec viande, ni post-training / low-carb). « Marquer cuisiné » déduit les ingrédients du garde-manger.</p>`;
+      <button class="btn" data-action="goto" data-tab="shopping">${icon("cart", 18)} Liste de courses</button>
+      ${n ? `<button class="btn ghost" data-action="clear-week">${icon("trash", 18)} Vider la semaine</button>` : ""}
+    </div>`;
 }
 
 function sidesCard(w) {
   const sides = (w.sides || []).filter(x => getRecipe(x.r));
-  return `<div class="card sides">
-    <div class="row between"><h3>🍰 Petits-déj, desserts, goûters & bases</h3>
-      <button class="btn small primary" data-action="pick-side">＋ Ajouter</button></div>
-    ${sides.length ? `<ul class="side-list">${sides.map(x => {
+  return `<div class="sides-head"><h2 class="section-title">Petits-déj, desserts & goûters</h2>
+      <button class="btn small pill" data-action="pick-side">${icon("plus", 16)} Ajouter</button></div>
+    ${sides.length ? `<ul class="list">${sides.map(x => {
       const r = getRecipe(x.r);
-      return `<li class="${x.c ? "cooked" : ""}">
-        <span class="side-main"><button class="recipe-link" data-action="view" data-id="${r.id}">${esc(r.name)}</button>
-          <span class="small muted">${esc(r.category)} · ${esc(yieldText(r))}</span></span>
-        <span class="p-actions">
-          <button class="btn small ${x.c ? "ok" : "outline"}" data-action="side-cooked" data-id="${x.id}">${x.c ? "✓ Fait" : "Marquer fait"}</button>
-          <button class="icon-btn small" data-action="side-remove" data-id="${x.id}" aria-label="Retirer">✕</button>
-        </span></li>`;
+      return `<li class="side-row ${x.c ? "cooked" : ""}">
+        <button class="row-item" data-action="view" data-id="${r.id}"><span class="grow"><span class="side-name">${esc(r.name)}</span>
+          <span class="meta">${esc(r.category)} · ${esc(yieldText(r))}</span></span></button>
+        <button class="icon-btn ${x.c ? "is-done" : ""}" data-action="side-cooked" data-id="${x.id}" aria-pressed="${!!x.c}" aria-label="${x.c ? "Fait (annuler)" : "Marquer comme fait"}">${icon("check", 20)}</button>
+        <button class="icon-btn" data-action="side-remove" data-id="${x.id}" aria-label="Retirer ${esc(r.name)}">${icon("x", 20)}</button>
+      </li>`;
     }).join("")}</ul>`
-    : `<p class="small muted">Un petit-déjeuner, un dessert, un goûter ou une pâte à préparer cette semaine ? Ajoutez-le ici : ses ingrédients iront dans la liste de courses.</p>`}
-  </div>`;
+    : `<p class="hint">Leurs ingrédients s'ajoutent à la liste de courses.</p>`}`;
 }
-
 function openPicker(day, side = false) {
   ui.pickerDay = side ? null : day;
   ui.pickerSide = side;
@@ -492,40 +563,42 @@ function markCooked(i) {
     restoreToPantry(w.cookLog[i]);
     w.cooked[i] = false;
     delete w.cookLog[i];
-    toast("Dîner remis à faire.");
+    toast("Dîner remis à faire");
   } else {
     const { log, msgs } = deductFromPantry(r);
     w.cooked[i] = true;
     w.cookLog[i] = log;
-    toast(msgs.length ? "Garde-manger mis à jour — " + msgs.join(" · ") : "Bon appétit ! 🍽️");
+    toast(msgs.length ? "Placard mis à jour : " + msgs.join(" · ") : "Bon appétit !");
   }
   save(); render();
 }
 
-function autofill() {
+/** Remplit les jours vides avec les meilleures propositions (placard, saison, historique, variété). */
+function proposeWeek() {
   const ws = ui.weekStart;
   const w = ensureWeek(ws);
-  const season = activeSeason(parseIso(ws));
-  const used = new Set(w.days.filter(Boolean));
-  const catCount = {};
-  w.days.forEach(id => { const r = getRecipe(id); if (r) catCount[r.category] = (catCount[r.category] || 0) + 1; });
   let filled = 0;
   for (let i = 0; i < 7; i++) {
     if (w.days[i]) continue;
-    const base = state.recipes.filter(r => isDinner(r) && !r.meat && !MANUAL_ONLY.includes(r.category) && r.seasons.includes(season) && !used.has(r.id));
-    const strict = base.filter(r => (catCount[r.category] || 0) < 2 && lastMadeInfo(r.id, ws).age > RECENT_WEEKS);
-    const pool = strict.length ? strict : base.length ? base : state.recipes.filter(r => isDinner(r) && !r.meat && !MANUAL_ONLY.includes(r.category) && !used.has(r.id));
-    if (!pool.length) break;
-    const pick = pool
-      .map(r => ({ r, score: Math.min(lastMadeInfo(r.id, ws).age, 12) + Math.random() * 6 }))
-      .sort((a, b) => b.score - a.score)[0].r;
-    w.days[i] = pick.id;
-    used.add(pick.id);
-    catCount[pick.category] = (catCount[pick.category] || 0) + 1;
+    const pick = bestFor(w, i, ws);
+    if (!pick) break;
+    w.days[i] = pick.id; w.cooked[i] = false;
     filled++;
   }
   save(); render();
-  toast(filled ? `${filled} dîner(s) proposé(s). Modifiez librement !` : "La semaine est déjà complète.");
+  toast(filled ? `${filled} dîner${filled > 1 ? "s" : ""} proposé${filled > 1 ? "s" : ""}` : "Aucune recette disponible");
+}
+/** ↻ : remplace le dîner du jour i par une autre proposition. */
+function swapDay(i) {
+  const ws = ui.weekStart, w = ensureWeek(ws);
+  const cur = w.days[i];
+  const tmp = { ...w, days: w.days.slice() };
+  tmp.days[i] = null;
+  const alt = bestFor(tmp, i, ws, cur ? [cur] : []);
+  if (!alt) return toast("Pas d'autre recette disponible");
+  w.days[i] = alt.id; w.cooked[i] = false; delete w.cookLog[i];
+  save(); render();
+  toast(`${DAYS[i]} : ${alt.name}`, { action: "Annuler", onAction: () => { w.days[i] = cur; save(); render(); } });
 }
 
 /* ---------- Onglet Courses ---------- */
@@ -806,12 +879,11 @@ function renderPantry() {
 }
 
 /* ---------- Onglet Idées de dernière minute ---------- */
-const BASICS = new Set(["sel", "poivre", "huile d'olive", "huile de colza", "eau"].map(matchKey));
 function availability(r, ignoreBasics) {
   const missing = [];
   let total = 0, have = 0;
   for (const ing of r.ingredients) {
-    if (ignoreBasics && (ing.aisle === "spi" || BASICS.has(matchKey(ing.name)))) continue;
+    if (ignoreBasics && isBasic(ing)) continue;
     total++;
     const b = isNum(ing.qty) ? toBase(ing.qty, ing.unit) : { q: null, u: "" };
     const p = findPantry(ing.name, b.u);
@@ -1107,7 +1179,8 @@ const ACTIONS = {
     save(); render();
   },
   "toggle-cooked": el => markCooked(+el.dataset.day),
-  autofill: () => autofill(),
+  propose: () => proposeWeek(),
+  "swap-day": el => swapDay(+el.dataset.day),
   "clear-week": () => {
     if (!confirm("Vider tous les dîners de cette semaine ?")) return;
     const w = ensureWeek(ui.weekStart);
@@ -1204,7 +1277,7 @@ const ACTIONS = {
     const ws = thisWeek(), w = ensureWeek(ws);
     let n = 0;
     for (const ing of r.ingredients) {
-      if (ui.ideas.ignoreBasics && (ing.aisle === "spi" || BASICS.has(matchKey(ing.name)))) continue;
+      if (ui.ideas.ignoreBasics && isBasic(ing)) continue;
       const b = isNum(ing.qty) ? toBase(ing.qty, ing.unit) : { q: null, u: "" };
       const p = findPantry(ing.name, b.u);
       let need = null;
