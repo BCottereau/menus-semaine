@@ -277,7 +277,7 @@ function shoppingText(ws) {
   const { toBuy } = computeShopping(ws);
   const remaining = toBuy.filter(it => !w.checked[it.key]);
   const groups = groupByAisle(remaining);
-  const lines = [`🛒 Courses — semaine du ${frDate(parseIso(ws), { day: "numeric", month: "long" })}`, ""];
+  const lines = [`Courses — semaine du ${frDate(parseIso(ws), { day: "numeric", month: "long" })}`, ""];
   const menu = w.days.map((id, i) => id && getRecipe(id) ? `${DAYS[i].slice(0, 3)}. ${getRecipe(id).name}` : null).filter(Boolean)
     .concat((w.sides || []).filter(x => getRecipe(x.r)).map(x => `+ ${getRecipe(x.r).name}`));
   if (menu.length) { lines.push("Menus :", ...menu.map(m => "  " + m), ""); }
@@ -287,7 +287,7 @@ function shoppingText(ws) {
     items.forEach(it => { const q = itemQty(it); lines.push(`☐ ${it.name}${q ? " — " + q : ""}`); });
     lines.push("");
   }
-  if (!remaining.length) lines.push("(Rien à acheter 🎉)");
+  if (!remaining.length) lines.push("(Rien à acheter)");
   return lines.join("\n").trim();
 }
 
@@ -671,56 +671,63 @@ function renderShopping() {
   const total = toBuy.length;
   const done = toBuy.filter(it => w.checked[it.key]).length;
   const groups = groupByAisle(toBuy);
-
+  const start = parseIso(ws), end = addDays(start, 6);
+  const range = `${start.getDate()}${start.getMonth() === end.getMonth() ? "" : " " + frDate(start, { month: "short" })} → ${end.getDate()} ${frDate(end, { month: "short" })}`;
   const aisleOptions = Object.entries(AISLES).map(([k, v]) => `<option value="${k}" ${k === "div" ? "selected" : ""}>${v}</option>`).join("");
 
   let listHtml = "";
   for (const [a, items] of Object.entries(groups)) {
     if (!items.length) continue;
     items.sort((x, y) => (!!w.checked[x.key] - !!w.checked[y.key]));
-    listHtml += `<div class="aisle card"><h3>${AISLES[a]} <small>${items.filter(it => !w.checked[it.key]).length}</small></h3>
-      ${items.map(it => `<label class="item ${w.checked[it.key] ? "done" : ""}">
-        <input type="checkbox" data-check="${esc(it.key)}" ${w.checked[it.key] ? "checked" : ""}>
-        <span class="item-main"><span class="item-name">${esc(it.name)}</span>
-          ${it.note ? `<span class="item-note">${esc(it.note)}</span>` : ""}
-          ${it.recipes.length ? `<span class="item-note">${esc(it.recipes.join(" · "))}</span>` : ""}</span>
-        <span class="item-qty">${esc(itemQty(it))}</span>
-        ${it.extra ? `<button class="icon-btn small" data-action="del-extra" data-id="${it.id}" aria-label="Supprimer">✕</button>` : ""}
-      </label>`).join("")}</div>`;
+    const left = items.filter(it => !w.checked[it.key]).length;
+    listHtml += `<h2 class="section-title aisle-title">${AISLES[a]}<span>${left}</span></h2><ul class="list">
+      ${items.map(it => {
+        const sub = [it.note, it.recipes.length ? it.recipes.join(" · ") : ""].filter(Boolean).join(" — ");
+        return `<li class="shop-row ${w.checked[it.key] ? "done" : ""}"><label class="row-item">
+          <input type="checkbox" data-check="${esc(it.key)}" ${w.checked[it.key] ? "checked" : ""}>
+          <span class="grow"><span class="p-title">${esc(it.name)}</span>${sub ? `<span class="meta">${esc(sub)}</span>` : ""}</span>
+          <span class="trail shop-qty">${esc(itemQty(it))}</span></label>
+          ${it.extra ? `<button class="icon-btn" data-action="del-extra" data-id="${it.id}" aria-label="Supprimer ${esc(it.name)}">${icon("x", 18)}</button>` : ""}</li>`;
+      }).join("")}</ul>`;
   }
 
   $("#tab-shopping").innerHTML = `
-    ${weekNav()}
+    <div class="page-head"><div><h1 id="h-shopping">Courses</h1><p class="sub">${total ? `${total} article${total > 1 ? "s" : ""} · ${done} dans le panier` : "Rien à acheter"}</p></div></div>
+    <div class="week-bar">
+      <button class="round-btn" data-action="week-prev" aria-label="Semaine précédente">${icon("chevronLeft", 22)}</button>
+      <div class="wb-center"><strong>${range}</strong><span class="wb-count">${weekLabel(ws)}</span></div>
+      <button class="round-btn" data-action="week-next" aria-label="Semaine suivante">${icon("chevronRight", 22)}</button>
+    </div>
     ${planned || w.extras.length ? `
-      <div class="progress-wrap"><div class="progress"><span style="width:${total ? Math.round(done / total * 100) : 0}%"></span></div>
-        <small>${done}/${total} dans le panier</small></div>
-      <div class="toolbar">
-        <button class="btn primary" data-action="copy-list">📋 Copier</button>
-        ${navigator.share ? `<button class="btn" data-action="share-list">📤 Partager</button>` : ""}
-        <button class="btn" data-action="download-list">⬇️ .txt</button>
-        <button class="btn ghost" data-action="show-text">Voir le texte</button>
+      <div class="progress week-progress" role="progressbar" aria-label="Articles dans le panier" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${done}"><span style="width:${total ? Math.round(done / total * 100) : 0}%"></span></div>
+      <div class="chips" role="toolbar" aria-label="Exporter la liste">
+        <button class="chip" data-action="copy-list">${icon("copy", 16)} Copier</button>
+        ${navigator.share ? `<button class="chip" data-action="share-list">${icon("share", 16)} Partager</button>` : ""}
+        <button class="chip" data-action="download-list">${icon("download", 16)} Fichier .txt</button>
+        <button class="chip" data-action="show-text">${icon("fileText", 16)} Voir le texte</button>
       </div>
-      ${listHtml || `<p class="empty">Tout est déjà au garde-manger 🎉</p>`}
+      ${listHtml || `<p class="empty">Tout est déjà dans ton placard.</p>`}
     ` : `<div class="empty card">Aucun dîner planifié pour cette semaine.<br><button class="btn primary" data-action="goto" data-tab="week">Planifier la semaine</button></div>`}
 
-    <form id="extraForm" class="card add-extra">
-      <h3>Ajouter un article</h3>
+    <form id="extraForm" class="extra-form" autocomplete="off">
+      <h2 class="section-title">Ajouter un article</h2>
       <div class="row">
-        <input name="name" placeholder="ex : pommes, savon…" required list="ingNames">
-        <input name="qty" placeholder="Qté" class="qty-input">
+        <label class="sr-only" for="extraName">Article</label><input id="extraName" name="name" placeholder="ex : pommes, savon" required list="ingNames">
+        <label class="sr-only" for="extraQty">Quantité</label><input id="extraQty" name="qty" placeholder="Quantité" class="qty-input">
       </div>
-      <div class="row"><select name="aisle">${aisleOptions}</select><button class="btn primary">Ajouter</button></div>
+      <div class="row"><label class="sr-only" for="extraAisle">Rayon</label><select id="extraAisle" name="aisle">${aisleOptions}</select>
+        <button class="btn primary">${icon("plus", 18)} Ajouter</button></div>
     </form>
 
     ${done ? `<div class="toolbar">
-      <button class="btn" data-action="stock-checked">🥫 Ranger les articles cochés au garde-manger</button>
+      <button class="btn" data-action="stock-checked">${icon("package", 18)} Ranger les articles cochés au placard</button>
       <button class="btn ghost" data-action="uncheck-all">Tout décocher</button></div>` : ""}
 
-    ${covered.length ? `<div class="card covered">
-      <button class="link" data-action="toggle-covered">${ui.showCovered ? "▾" : "▸"} Déjà à la maison (${covered.length}) — retiré de la liste</button>
-      ${ui.showCovered ? `<ul>${covered.map(it => `<li><strong>${esc(it.name)}</strong> ${esc(fmtQty(it.qty, it.unit))} <span class="muted">(${esc(it.note)})</span></li>`).join("")}</ul>` : ""}
-    </div>` : ""}
-    ${w.cooked.some(Boolean) ? `<p class="hint">Les dîners déjà marqués « cuisiné » ne sont plus comptés dans la liste.</p>` : ""}`;
+    ${covered.length ? `<button class="section-title toggle-title" data-action="toggle-covered" aria-expanded="${ui.showCovered}">
+        Déjà au placard · ${covered.length} ${icon(ui.showCovered ? "chevronDown" : "chevronRight", 16)}</button>
+      ${ui.showCovered ? `<ul class="list">${covered.map(it => `<li><div class="row-item static"><span class="grow"><span class="p-title">${esc(it.name)}</span>
+        <span class="meta">${esc(it.note)}</span></span><span class="trail">${esc(fmtQty(it.qty, it.unit))}</span></div></li>`).join("")}</ul>` : ""}` : ""}
+    ${w.cooked.some(Boolean) ? `<p class="hint">Les dîners déjà cuisinés ne sont plus comptés.</p>` : ""}`;
 }
 
 async function copyText(text) {
@@ -1092,50 +1099,83 @@ function renderIdeas() {
 }
 
 /* ---------- Onglet Historique ---------- */
+/** Ordre pseudo-aléatoire stable pour la semaine (évite que la liste change à chaque affichage). */
+const weeklyShuffle = (arr, salt) => arr.map(x => {
+  let h = 0; for (const c of x.id + salt) h = (h * 31 + c.charCodeAt(0)) | 0;
+  return [h, x];
+}).sort((a, b) => a[0] - b[0]).map(x => x[1]);
+function historyRow(r, meta) {
+  return `<li class="h-row"><button class="row-item" data-action="view" data-id="${r.id}">
+      <span class="grow"><span class="p-title">${esc(r.name)}</span><span class="meta">${esc(meta)}</span></span></button>
+    <button class="btn small pill" data-action="add-next-free" data-id="${r.id}" aria-label="Ajouter ${esc(r.name)} au prochain jour libre">${icon("plus", 16)} Semaine</button></li>`;
+}
 function renderHistory() {
   const cur = thisWeek();
-  const weeks = Object.entries(state.weeks).filter(([, w]) => w.days.some(Boolean)).sort((a, b) => b[0].localeCompare(a[0]));
-  const counts = {};
+  const weeks = Object.entries(state.weeks).filter(([, w]) => w.days.some(Boolean) || (w.sides || []).length).sort((a, b) => b[0].localeCompare(a[0]));
   const limit = iso(addDays(parseIso(cur), -7 * 12));
-  for (const [k, w] of weeks) if (k >= limit && k <= cur) w.days.forEach(id => id && (counts[id] = (counts[id] || 0) + 1));
+  const counts = {};
+  for (const [k, w] of weeks) if (k >= limit) w.days.forEach((id, i) => { if (id && w.cooked[i]) counts[id] = (counts[id] || 0) + 1; });
   const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5).filter(([id]) => getRecipe(id));
   const s = activeSeason();
-  const forgotten = state.recipes.filter(r => r.seasons.includes(s))
-    .map(r => ({ r, info: lastMadeInfo(r.id, cur) }))
-    .filter(x => x.info.age > RECENT_WEEKS)
-    .sort((a, b) => b.info.age - a.info.age || Math.random() - 0.5).slice(0, 6);
+  const seasonal = state.recipes.filter(r => isDinner(r) && r.seasons.includes(s));
+  const redo = seasonal.map(r => ({ r, d: lastCookedDate(r.id) }))
+    .filter(x => x.d && weeksBetween(iso(mondayOf(parseIso(x.d))), cur) > RECENT_WEEKS)
+    .sort((a, b) => a.d.localeCompare(b.d)).slice(0, 6);
+  const discover = weeklyShuffle(seasonal.filter(r => !r.meat && !MANUAL_ONLY.includes(r.category) && !lastCookedDate(r.id)), cur).slice(0, 5);
 
   $("#tab-history").innerHTML = `
-    <div class="section-head"><h2>Historique</h2></div>
-    <div class="grid-2">
-      <div class="card"><h3>${SEASON_ICONS[s]} À refaire pour varier</h3>
-        <p class="small muted">Recettes de saison pas cuisinées depuis longtemps</p>
-        <ul class="simple">${forgotten.map(({ r, info }) => `<li><button class="link" data-action="view" data-id="${r.id}">${esc(r.name)}</button> <span class="small muted">${info.txt}</span></li>`).join("") || "<li class='muted'>—</li>"}</ul></div>
-      <div class="card"><h3>🔁 Les plus cuisinées</h3>
-        <p class="small muted">Sur les 12 dernières semaines</p>
-        <ul class="simple">${top.map(([id, n]) => `<li><button class="link" data-action="view" data-id="${id}">${esc(getRecipe(id).name)}</button> <span class="small muted">× ${n}</span></li>`).join("") || "<li class='muted'>Pas encore d'historique.</li>"}</ul></div>
-    </div>
-    ${weeks.map(([k, w]) => `<div class="card week-hist ${k === cur ? "current" : ""}">
-      <div class="row between"><h3>Semaine du ${frDate(parseIso(k), { day: "numeric", month: "long", year: "numeric" })}</h3>
-        <span class="small muted">${weekLabel(k)}</span></div>
-      <ul class="simple">${w.days.map((id, i) => id ? `<li><span class="muted small">${DAYS[i].slice(0, 3)}.</span> ${getRecipe(id) ? `<button class="link" data-action="view" data-id="${id}">${esc(getRecipe(id).name)}</button>` : "<em>recette supprimée</em>"} ${w.cooked[i] ? "✓" : ""}</li>` : "").join("")}${(w.sides || []).filter(x => getRecipe(x.r)).map(x => `<li><span class="muted small">+</span> <button class="link" data-action="view" data-id="${x.r}">${esc(getRecipe(x.r).name)}</button> ${x.c ? "✓" : ""}</li>`).join("")}</ul>
-      <button class="btn small" data-action="open-week" data-week="${k}">Ouvrir cette semaine</button>
-    </div>`).join("") || `<p class="empty">L'historique se remplit au fil des semaines planifiées.</p>`}
-    <div class="card">
-      <h3>☁️ Synchronisation Mac ↔ téléphone</h3>
-      <p class="small">${esc(syncStatusText())}</p>
-      <button class="btn" data-action="sync-settings">${Sync.enabled() ? "Réglages de synchronisation" : "Configurer la synchronisation"}</button>
-    </div>
-    <div class="card">
-      <h3>💾 Sauvegarde des données</h3>
-      <p class="small muted">Les données sont stockées uniquement dans ce navigateur. Exportez-les de temps en temps ou pour les transférer sur un autre appareil.</p>
-      <div class="toolbar">
-        <button class="btn" data-action="export-data">⬇️ Exporter (JSON)</button>
-        <button class="btn" data-action="import-data">⬆️ Importer</button>
-        <button class="btn ghost" data-action="reset-recipes">Restaurer les recettes de départ</button>
-        <button class="btn danger" data-action="wipe-all">Tout effacer</button>
-      </div>
-    </div>`;
+    <div class="page-head"><div><h1 id="h-history">Historique</h1><p class="sub">${weeks.length} semaine${weeks.length > 1 ? "s" : ""} planifiée${weeks.length > 1 ? "s" : ""}</p></div></div>
+    <h2 class="section-title">À refaire pour varier · ${SEASON_LABELS[s]}</h2>
+    ${redo.length ? `<ul class="list">${redo.map(({ r }) => historyRow(r, `Dernière fois : ${lastCookedLabel(r.id).toLowerCase()}`)).join("")}</ul>`
+      : `<p class="hint">Les recettes déjà cuisinées et pas refaites depuis plus de ${RECENT_WEEKS} semaines apparaîtront ici.</p>`}
+    <h2 class="section-title">À découvrir</h2>
+    ${discover.length ? `<ul class="list">${discover.map(r => historyRow(r, `${r.category} · jamais cuisinée`)).join("")}</ul>` : `<p class="hint">Tu as déjà tout cuisiné en cette saison !</p>`}
+    <h2 class="section-title">Les plus cuisinées · 12 dernières semaines</h2>
+    ${top.length ? `<ul class="list">${top.map(([id, n]) => `<li><button class="row-item" data-action="view" data-id="${id}">
+        <span class="grow p-title">${esc(getRecipe(id).name)}</span><span class="trail">${n} fois ${icon("chevronRight", 18)}</span></button></li>`).join("")}</ul>`
+      : `<p class="hint">Marque un dîner comme cuisiné pour voir tes habitudes ici.</p>`}
+    <h2 class="section-title">Semaines</h2>
+    ${weeks.length ? `<ul class="list">${weeks.map(([k, w]) => {
+      const names = w.days.map(id => id && getRecipe(id)).filter(Boolean).map(r => r.name);
+      const done = w.cooked.filter(Boolean).length;
+      return `<li><button class="row-item" data-action="open-week" data-week="${k}">
+        <span class="grow"><span class="p-title">Semaine du ${frDate(parseIso(k), { day: "numeric", month: "long" })}${k === cur ? ` <span class="pill-new">En cours</span>` : ""}</span>
+        <span class="meta">${names.length}/7 dîners${done ? ` · ${done} cuisiné${done > 1 ? "s" : ""}` : ""}${names.length ? " · " + esc(names.slice(0, 2).join(", ")) + (names.length > 2 ? "…" : "") : ""}</span></span>
+        <span class="trail">${icon("chevronRight", 18)}</span></button></li>`;
+    }).join("")}</ul>` : `<p class="hint">L'historique se remplit au fil des semaines planifiées.</p>`}
+    <h2 class="section-title">Données</h2>
+    <ul class="list">
+      <li><button class="row-item" data-action="sync-settings"><span class="grow"><span class="p-title">Synchronisation Mac ↔ téléphone</span>
+        <span class="meta">${esc(syncStatusText())}</span></span><span class="trail">${icon("chevronRight", 18)}</span></button></li>
+      <li><button class="row-item" data-action="export-data"><span class="grow p-title">Exporter une sauvegarde (JSON)</span><span class="trail">${icon("download", 18)}</span></button></li>
+      <li><button class="row-item" data-action="import-data"><span class="grow p-title">Importer une sauvegarde</span><span class="trail">${icon("upload", 18)}</span></button></li>
+      <li><button class="row-item" data-action="reset-recipes"><span class="grow p-title">Restaurer les recettes de départ</span><span class="trail">${icon("refresh", 18)}</span></button></li>
+      <li><button class="row-item danger-row" data-action="wipe-all"><span class="grow p-title">Tout effacer</span><span class="trail">${icon("trash", 18)}</span></button></li>
+    </ul>`;
+}
+/** Ajoute une recette au prochain jour libre de la semaine à planifier (ou de la suivante). */
+function addToNextFree(rid) {
+  const r = getRecipe(rid);
+  if (!r) return;
+  if (!isDinner(r)) {
+    const ws = defaultWeekStart(), w = ensureWeek(ws), id = uid();
+    w.sides.push({ id, r: rid, c: false, l: null });
+    save(); render();
+    return toast(`${r.name} ajouté à la semaine`, { action: "Annuler", onAction: () => { w.sides = w.sides.filter(x => x.id !== id); save(); render(); } });
+  }
+  const todayIdx = (new Date().getDay() + 6) % 7;
+  for (let k = 0; k < 2; k++) {
+    const ws = iso(addDays(parseIso(defaultWeekStart()), 7 * k)), w = ensureWeek(ws);
+    const from = ws === thisWeek() ? todayIdx : 0;
+    for (let i = from; i < 7; i++) {
+      if (w.days[i]) continue;
+      w.days[i] = rid; w.cooked[i] = false;
+      save(); render();
+      const label = `${DAYS[i].toLowerCase()} ${addDays(parseIso(ws), i).getDate()}`;
+      return toast(`Ajouté au ${label}`, { action: "Annuler", onAction: () => { w.days[i] = null; save(); render(); } });
+    }
+  }
+  toast("Pas de jour libre sur les deux prochaines semaines");
 }
 
 /* ---------- Synchronisation (interface) ---------- */
@@ -1366,12 +1406,12 @@ const ACTIONS = {
   "add-ing-row": () => $("#ingRows").insertAdjacentHTML("beforeend", ingRow()),
   "del-ing-row": el => el.closest(".ing-row").remove(),
 
-  "copy-list": async () => toast(await copyText(shoppingText(ui.weekStart)) ? "Liste copiée 📋" : "Copie impossible : utilisez « Voir le texte »."),
+  "copy-list": async () => toast(await copyText(shoppingText(ui.weekStart)) ? "Liste copiée" : "Copie impossible : utilise « Voir le texte »"),
   "share-list": async () => {
     try { await navigator.share({ title: "Liste de courses", text: shoppingText(ui.weekStart) }); } catch (e) { /* annulé */ }
   },
   "download-list": () => downloadFile(`courses-${ui.weekStart}.txt`, shoppingText(ui.weekStart), "text/plain;charset=utf-8"),
-  "show-text": () => openModal(`<div class="modal-head"><h2>Liste en texte</h2><button class="icon-btn" data-action="close">✕</button></div>
+  "show-text": () => openModal(`<div class="modal-head"><h2>Liste en texte</h2><button class="icon-btn" data-action="close" aria-label="Fermer">${icon("x", 22)}</button></div>
       <textarea class="export-text" readonly rows="18">${esc(shoppingText(ui.weekStart))}</textarea>
       <p class="hint">Sélectionnez le texte puis copiez-le.</p>`),
   "toggle-covered": () => { ui.showCovered = !ui.showCovered; render(); },
@@ -1385,10 +1425,10 @@ const ACTIONS = {
   "stock-checked": () => {
     const ws = ui.weekStart, w = ensureWeek(ws);
     const items = computeShopping(ws).toBuy.filter(it => w.checked[it.key] && !it.extra);
-    if (!items.length) return toast("Cochez d'abord les articles achetés (hors articles libres).");
-    if (!confirm(`Ajouter ${items.length} article(s) acheté(s) au garde-manger ?\nIls seront ensuite déduits quand vous marquerez un dîner comme « cuisiné ».`)) return;
+    if (!items.length) return toast("Coche d'abord les articles achetés");
+    if (!confirm(`Ranger ${items.length} article(s) acheté(s) au placard ?\nIls seront déduits quand un dîner sera marqué « cuisiné ».`)) return;
     items.forEach(it => { addToPantry(it.name, it.qty, it.unit, true); delete w.checked[it.key]; });
-    save(); render(); toast("Courses rangées au garde-manger 🥫");
+    save(); render(); toast("Courses rangées au placard");
   },
 
   "pantry-add-sheet": () => openPantryAddSheet(),
@@ -1444,6 +1484,7 @@ const ACTIONS = {
   },
 
   "season-sheet": () => openSeasonSheet(),
+  "add-next-free": el => addToNextFree(el.dataset.id),
   "close-sheet": () => closeSheet(),
   "filter-sheet": el => openFilterSheet(el.dataset.scope),
   "chip-toggle": el => { const f = ui.filters[el.dataset.scope]; f[el.dataset.key] = !f[el.dataset.key]; refreshFilters(el.dataset.scope); },

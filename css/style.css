@@ -421,3 +421,20 @@ ul.simple li { padding: 4px 0; }
 .idea .dc-title { padding-top: 0; }
 .idea .progress { margin: 10px 0 6px; }
 .ok-text { color: var(--success); }
+
+/* =====================================================================
+   Historique, Courses
+   ===================================================================== */
+.h-row { display: flex; align-items: center; padding-right: 8px; }
+.h-row .row-item { padding-right: 0; }
+.danger-row .p-title, .danger-row .trail { color: var(--danger); }
+.aisle-title { display: flex; justify-content: space-between; }
+.aisle-title span { color: var(--text-muted); font-weight: 500; }
+.shop-row { display: flex; align-items: center; padding-right: 4px; }
+.shop-row .row-item { cursor: pointer; }
+.shop-row input[type="checkbox"] { width: 24px; height: 24px; }
+.shop-row.done .p-title, .shop-row.done .shop-qty { color: var(--text-muted); text-decoration: line-through; }
+.shop-qty { font-weight: 600; white-space: nowrap; padding-right: 8px; }
+.row-item.static { cursor: default; }
+.toggle-title { display: flex; align-items: center; gap: 6px; border: 0; background: none; padding: 0; min-height: var(--tap); cursor: pointer; font-family: inherit; }
+.extra-form { margin-top: 8px; }
