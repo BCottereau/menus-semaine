@@ -440,3 +440,7 @@ ul.simple li { padding: 4px 0; }
 .extra-form { margin-top: 8px; }
 .shop-row .meta, .h-row .meta { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .row-item .grow > .meta { display: block; }
+.aisle-row { align-items: flex-end; }
+.aisle-row label.aisle-label { flex: 0 0 100%; margin: 0 0 -2px; display: flex; align-items: center; gap: 8px; }
+.aisle-row select { flex: 1 1 160px; }
+.auto-tag { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: var(--r-pill); background: var(--success-soft); color: var(--success); }

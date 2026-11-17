@@ -13,6 +13,9 @@ const AISLES = {
   cre: "Crèmerie",
   epi: "Épicerie",
   spi: "Épices & condiments",
+  sur: "Surgelés",
+  boi: "Boissons",
+  hyg: "Hygiène & maison",
   div: "Divers"
 };
 

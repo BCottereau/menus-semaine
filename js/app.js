@@ -167,6 +167,38 @@ function lastMadeInfo(rid, ws) {
   return { txt: n === 1 ? "cuisiné la semaine dernière" : `cuisiné il y a ${n} semaines`, warn: n <= RECENT_WEEKS, age: n };
 }
 
+/* ------------------------ Rayon deviné automatiquement --------------------- */
+/* Ordre important : les expressions précises (« lait de coco ») avant les générales (« lait »). */
+const AISLE_RULES = [
+  ["sur", /\b(surgel|congel|glace|glaces|frites|sorbet|bâtonnets? de poisson)/],
+  ["hyg", /\b(savon|shampo|dentifrice|brosse a dent|papier toilette|essuie|mouchoir|lessive|adoucissant|liquide vaisselle|vaisselle|eponge|sac(s)? poubelle|deodorant|gel douche|coton|rasoir|javel|nettoyant|menager|serviette|protege|couche|lingette|pile|ampoule|aluminium|film etirable|papier cuisson|sac congelation)/],
+  ["boi", /\b(eau|jus|soda|biere|vin|cidre|champagne|coca|limonade|kombucha|sirop de (menthe|grenadine)|tisane|infusion)\b/],
+  ["epi", /\b(lait de coco|lait d'amande|lait d'avoine|lait de soja|lait de riz|lait de noisette|lait vegetal|creme de coco|pate a tartiner|pate de curry|pate miso|beurre de cacahuete|puree d'amande|sauce tomate|coulis|tomates? concassee|concentre de tomate|tomates? sechee|pois chiches en boite)/],
+  ["spi", /\b(sel|poivre|epice|curry|cumin|paprika|cannelle|muscade|curcuma|herbes de provence|ras el hanout|piment|moutarde|sauce soja|ketchup|mayonnaise|vanille|safran|origan|laurier|gingembre en poudre|nuoc)/],
+  ["cre", /\b(lait|yaourt|yogourt|fromage|beurre|creme|skyr|mozzarella|comte|emmental|parmesan|feta|chevre|ricotta|mascarpone|camembert|brie|raclette|reblochon|faisselle|petit suisse|kefir)/],
+  ["pro", /\b(oeuf|tofu|tempeh|seitan|lentille|pois chiche|pois casse|haricots? (rouge|blanc|noir)|flageolet|edamame|poulet|dinde|boeuf|porc|veau|agneau|canard|jambon|lardon|bacon|saumon|thon|sardine|maquereau|cabillaud|colin|crevette|gambas|poisson|viande|steak|saucisse|chorizo|merguez|proteines? de soja|pst)/],
+  ["fec", /\b(pain|baguette|brioche|pate|pates|riz|semoule|quinoa|boulgour|farine|flocon|cereale|muesli|nouille|spaghetti|tagliatelle|coquillette|penne|fusilli|lasagne|gnocchi|tortilla|wrap|biscotte|polenta|sarrasin|crozet|vermicelle|pomme de terre|patate)/],
+  ["leg", /\b(pomme|poire|banane|orange|citron|clementine|mandarine|pamplemousse|kiwi|raisin|fraise|framboise|myrtille|cerise|peche|nectarine|abricot|prune|melon|pasteque|ananas|mangue|avocat|figue|grenade|fruit|tomate|salade|laitue|mache|roquette|mesclun|epinard|carotte|poireau|oignon|echalote|ail|courgette|aubergine|poivron|concombre|radis|chou|brocoli|celeri|fenouil|navet|betterave|potiron|potimarron|courge|butternut|champignon|haricot vert|petits? pois|asperge|artichaut|endive|persil|coriandre|basilic|menthe|ciboulette|aneth|thym|romarin|gingembre|legume|pousse|cebette|panais|topinambour|blette)/],
+  ["epi", /\b(huile|vinaigre|sucre|conserve|chocolat|cacao|cafe|the|confiture|miel|biscuit|gateau|compote|noix|amande|noisette|pistache|cajou|cacahuete|graine|levure|bouillon|olive|sirop|maizena|fecule|gelatine|agar|raisins? sec|datte|pruneau|chips|apero|cornichon|capre|whey|proteine)/]
+];
+/** Rayon le plus probable d'un article : d'abord les recettes connues, puis des mots-clés. */
+function guessAisle(name) {
+  const k = matchKey(name);
+  if (!k) return "div";
+  const votes = {};
+  for (const r of state.recipes) for (const i of r.ingredients) {
+    if (matchKey(i.name) === k && AISLES[i.aisle]) votes[i.aisle] = (votes[i.aisle] || 0) + 1;
+  }
+  const best = Object.entries(votes).sort((a, b) => b[1] - a[1])[0];
+  if (best) return best[0];
+  const n = norm(name);
+  for (const [aisle, re] of AISLE_RULES) if (re.test(n)) return aisle;
+  for (const r of state.recipes) for (const i of r.ingredients) {
+    if (AISLES[i.aisle] && namesMatch(matchKey(i.name), k)) return i.aisle;
+  }
+  return "div";
+}
+
 /* -------------------------------- Placard -------------------------------- */
 function findPantry(name, baseUnit) {
   const k = matchKey(name);
@@ -177,20 +209,21 @@ function findPantry(name, baseUnit) {
     || cands.find(p => !isNum(p.qty))
     || cands[0];
 }
-function addToPantry(name, qty, unit, fuzzy = false) {
+function addToPantry(name, qty, unit, fuzzy = false, aisle = "") {
   name = String(name).trim();
   if (!name) return;
+  aisle = AISLES[aisle] ? aisle : guessAisle(name);
   const b = isNum(qty) ? toBase(qty, unit) : { q: null, u: "" };
   const k = matchKey(name);
   const p = fuzzy
     ? findPantry(name, b.u)
     : state.pantry.find(x => matchKey(x.name) === k && (!isNum(x.qty) || b.q === null || toBase(x.qty, x.unit).u === b.u));
-  if (!p) { state.pantry.push({ id: uid(), name, qty: b.q, unit: b.q === null ? "" : b.u, addedAt: iso(new Date()) }); return; }
+  if (!p) { state.pantry.push({ id: uid(), name, qty: b.q, unit: b.q === null ? "" : b.u, aisle, addedAt: iso(new Date()) }); return; }
   if (b.q === null) return;
   if (!isNum(p.qty)) { p.qty = b.q; p.unit = b.u; return; }
   const pb = toBase(p.qty, p.unit);
   if (pb.u === b.u) { p.qty = pb.q + b.q; p.unit = pb.u; }
-  else state.pantry.push({ id: uid(), name, qty: b.q, unit: b.u, addedAt: iso(new Date()) });
+  else state.pantry.push({ id: uid(), name, qty: b.q, unit: b.u, aisle, addedAt: iso(new Date()) });
 }
 /** Déduit les ingrédients d'une recette des quantités suivies au placard. */
 function deductFromPantry(r) {
@@ -315,7 +348,7 @@ function activeFilterChips(scope) {
   const f = ui.filters[scope], out = [];
   if (f.season) out.push(["season", f.season === "current" ? `De saison (${SEASON_LABELS[seasonCtxOf(scope)]})` : SEASON_LABELS[f.season]]);
   if (f.cat) out.push(["cat", f.cat]);
-  if (f.meat) out.push(["meat", f.meat === "non" ? "Végé" : "Avec viande"]);
+  if (f.meat) out.push(["meat", f.meat === "non" ? "Végé" : "Viande"]);
   if (f.ings && f.ings.length) out.push(["ings", `Avec : ${f.ings.slice(0, 2).join(", ")}${f.ings.length > 2 ? "…" : ""}`]);
   return out;
 }
@@ -356,7 +389,7 @@ function openFilterSheet(scope) {
     <select id="fs-cat" data-filter="cat" data-scope="${scope}"><option value="">Toutes les catégories</option>
       ${allCategories().map(c => `<option ${f.cat === c ? "selected" : ""}>${esc(c)}</option>`).join("")}</select>
     <h3 class="sheet-label">Végé ou viande</h3>
-    ${seg("meat", [["", "Tout"], ["non", "Végé (pour nous deux)"], ["oui", "Avec viande"]])}
+    ${seg("meat", [["", "Tout"], ["non", "Végé (pour nous deux)"], ["oui", "Viande"]])}
     <h3 class="sheet-label">Préparation</h3>
     <div class="seg">
       <button aria-pressed="${f.cookeo}" data-action="chip-toggle" data-scope="${scope}" data-key="cookeo">Cookeo</button>
@@ -371,7 +404,7 @@ function badges(r) {
   const seasons = r.seasons.length === 4 ? "Toute l'année" : r.seasons.map(s => SEASON_LABELS[s]).join(", ");
   return `<span class="tag">${esc(r.category)}</span><span class="tag">${seasons}</span>`
     + (r.cookeo ? `<span class="tag">Cookeo</span>` : "")
-    + (r.meat ? `<span class="tag">Avec viande · Baptiste</span>` : "");
+    + (r.meat ? `<span class="tag">Viande</span>` : "");
 }
 
 /** Dernier jour (passé) où la recette était au planning, ou null. */
@@ -714,7 +747,8 @@ function renderShopping() {
         <label class="sr-only" for="extraName">Article</label><input id="extraName" name="name" placeholder="ex : pommes, savon" required list="ingNames">
         <label class="sr-only" for="extraQty">Quantité</label><input id="extraQty" name="qty" placeholder="Quantité" class="qty-input">
       </div>
-      <div class="row"><label class="sr-only" for="extraAisle">Rayon</label><select id="extraAisle" name="aisle">${aisleOptions}</select>
+      <div class="row aisle-row"><label for="extraAisle" class="aisle-label">Rayon <span id="aisleAuto" class="auto-tag" hidden>détecté</span></label>
+        <select id="extraAisle" name="aisle" data-guess-for="extraName">${aisleOptions}</select>
         <button class="btn primary">${icon("plus", 18)} Ajouter</button></div>
     </form>
 
@@ -774,7 +808,7 @@ function recipeCard(r, action = "view") {
     `<span>${icon("users", 15)} ${esc(r.yield || "3 pers.")}</span>`,
     `<span>${icon("list", 15)} ${r.ingredients.length} ingr.</span>`
   ].filter(Boolean).join("");
-  const second = r.meat ? "Avec viande · Baptiste" : (r.cookeo ? "Cookeo" : "");
+  const second = r.cookeo ? "Cookeo" : (r.meat ? "Viande" : "");
   return `<button class="recipe-card" data-action="${action}" data-id="${r.id}">
     <span class="rc-title">${esc(r.name)}${last ? "" : `<span class="pill-new">Nouveau</span>`}</span>
     <span class="rc-meta">${meta}</span>
@@ -807,7 +841,7 @@ function viewRecipe(id) {
     <div class="tags">${badges(r)}</div>
     <p class="rc-meta">${r.time ? `<span>${icon("clock", 15)} ${r.time} min</span>` : ""}<span>${icon("users", 15)} ${esc(yieldText(r))}</span><span>${lastCookedLabel(r.id) || "Jamais cuisinée"}</span></p>
     ${r.cookeo ? `<div class="info-box"><strong>Cookeo :</strong> ${esc(r.cookeoNote || "recette adaptée au Cookeo.")}</div>` : ""}
-    ${r.meat ? `<div class="info-box">Recette avec viande ou poisson : pour Baptiste.</div>` : ""}
+    ${r.meat ? `<div class="info-box">Viande ou poisson : pour Baptiste.</div>` : ""}
     <h3>Ingrédients <small class="muted">(${esc(yieldText(r))})</small></h3>
     <ul class="ing-list">${r.ingredients.map(i => `<li><span>${esc(i.name)}</span><span class="muted">${esc(isNum(i.qty) ? fmtQty(i.qty, i.unit) : "selon goût")}</span></li>`).join("")}</ul>
     <h3>Préparation</h3>
@@ -861,7 +895,7 @@ function editRecipe(id, asCopy = false) {
         ${Object.keys(SEASON_LABELS).map(s => `<label class="chk"><input type="checkbox" name="season" value="${s}" ${r.seasons.includes(s) ? "checked" : ""}> ${SEASON_LABELS[s]}</label>`).join("")}
       </fieldset>
       <div class="row">
-        <label class="chk"><input type="checkbox" name="meat" ${r.meat ? "checked" : ""}> Avec viande ou poisson (Baptiste)</label>
+        <label class="chk"><input type="checkbox" name="meat" ${r.meat ? "checked" : ""}> Viande ou poisson</label>
         <label class="chk"><input type="checkbox" name="cookeo" ${r.cookeo ? "checked" : ""}> Cookeo</label>
       </div>
       <label>Programme Cookeo (si pertinent)<input name="cookeoNote" value="${esc(r.cookeoNote)}" placeholder="ex : Dorer 3 min puis sous pression 10 min"></label>
@@ -961,8 +995,10 @@ function renderPantry() {
       <ul class="list">${soon.map(p => pantryRow(p, true)).join("")}</ul>
       <button class="link soon-link" data-action="recipes-for-soon">Voir les recettes qui les utilisent ${icon("chevronRight", 16)}</button>
     </section>` : ""}
-    ${n ? `<h2 class="section-title">En stock</h2>
-      ${stock.length ? `<ul class="list">${stock.map(p => pantryRow(p, false)).join("")}</ul>` : `<p class="hint">Rien d'autre${q ? " pour cette recherche" : ""}.</p>`}
+    ${n ? `${stock.length ? Object.keys(AISLES).map(a => {
+        const group = stock.filter(p => (AISLES[p.aisle] ? p.aisle : guessAisle(p.name)) === a);
+        return group.length ? `<h2 class="section-title aisle-title">${AISLES[a]}<span>${group.length}</span></h2><ul class="list">${group.map(p => pantryRow(p, false)).join("")}</ul>` : "";
+      }).join("") : `<h2 class="section-title">En stock</h2><p class="hint">Rien d'autre${q ? " pour cette recherche" : ""}.</p>`}
       <p class="hint pantry-help">${icon("info", 16)} Sans quantité, un ingrédient est « en stock » ; avec une quantité, elle diminue quand un dîner est marqué cuisiné. Glisser une ligne vers la gauche pour la supprimer.</p>
       <div class="toolbar">
         <button class="btn" data-action="goto" data-tab="ideas">${icon("bulb", 18)} Que cuisiner avec mon placard ?</button>
@@ -1076,7 +1112,7 @@ function renderIdeas() {
     .sort((x, y) => x.a.missing.length - y.a.missing.length || (y.a.have / y.a.total) - (x.a.have / x.a.total));
   const card = ({ r, a }) => `<article class="card idea">
       <button class="dc-title" data-action="view" data-id="${r.id}">${esc(r.name)}</button>
-      <div class="tags"><span class="tag">${esc(r.category)}</span>${r.meat ? `<span class="tag">Avec viande · Baptiste</span>` : ""}</div>
+      <div class="tags"><span class="tag">${esc(r.category)}</span>${r.meat ? `<span class="tag">Viande</span>` : ""}</div>
       <div class="progress" aria-hidden="true"><span style="width:${a.total ? Math.round(a.have / a.total * 100) : 100}%"></span></div>
       <p class="small ${a.missing.length ? "warn-text" : "ok-text"}">${a.missing.length ? `Il manque : ${a.missing.map(esc).join(", ")}` : "Tu as tout ce qu'il faut"}</p>
       <div class="toolbar tight">
@@ -1423,10 +1459,17 @@ const ACTIONS = {
   },
   "stock-checked": () => {
     const ws = ui.weekStart, w = ensureWeek(ws);
-    const items = computeShopping(ws).toBuy.filter(it => w.checked[it.key] && !it.extra);
+    const items = computeShopping(ws).toBuy.filter(it => w.checked[it.key]);
     if (!items.length) return toast("Coche d'abord les articles achetés");
     if (!confirm(`Ranger ${items.length} article(s) acheté(s) au placard ?\nIls seront déduits quand un dîner sera marqué « cuisiné ».`)) return;
-    items.forEach(it => { addToPantry(it.name, it.qty, it.unit, true); delete w.checked[it.key]; });
+    items.forEach(it => {
+      if (it.extra) {
+        const v = parseQtyUnit(it.qtyText);
+        addToPantry(it.name, v ? v.qty : null, v ? v.unit : "", true, it.aisle);
+        w.extras = w.extras.filter(x => x.id !== it.id);
+      } else addToPantry(it.name, it.qty, it.unit, true, it.aisle);
+      delete w.checked[it.key];
+    });
     save(); render(); toast("Courses rangées au placard");
   },
 
@@ -1547,6 +1590,12 @@ document.addEventListener("input", e => {
   } else if (t.dataset.idea) {
     ui.ideas[t.dataset.idea] = t.type === "checkbox" ? t.checked : +t.value;
     renderIdeas();
+  } else if (t.id === "extraName") {
+    const sel = $("#extraAisle");
+    if (sel && !sel.dataset.manual) {
+      sel.value = t.value.trim() ? guessAisle(t.value) : "div";
+      $("#aisleAuto").hidden = !t.value.trim();
+    }
   } else if (t.id === "pantrySearch") {
     ui.pantryQ = t.value;
     const pos = t.selectionStart;
@@ -1561,18 +1610,16 @@ document.addEventListener("change", e => {
     const w = ensureWeek(ui.weekStart);
     if (t.checked) w.checked[t.dataset.check] = true; else delete w.checked[t.dataset.check];
     save(); renderShopping();
+  } else if (t.id === "extraAisle") {
+    t.dataset.manual = "1"; $("#aisleAuto").hidden = true;
   } else if (t.name === "iname") {
-    // Rayon deviné automatiquement pour un ingrédient déjà connu
+    // Rayon (et unité) devinés automatiquement
+    const row = t.closest(".ing-row");
     const k = matchKey(t.value);
-    for (const r of state.recipes) {
-      const ing = r.ingredients.find(i => matchKey(i.name) === k);
-      if (ing) {
-        const row = t.closest(".ing-row");
-        row.querySelector("[name=iaisle]").value = ing.aisle;
-        row.querySelector("[name=iunit]").value = ing.unit;
-        break;
-      }
-    }
+    let known = null;
+    for (const r of state.recipes) { known = r.ingredients.find(i => matchKey(i.name) === k); if (known) break; }
+    row.querySelector("[name=iaisle]").value = known ? known.aisle : guessAisle(t.value);
+    if (known) row.querySelector("[name=iunit]").value = known.unit;
   } else if (t.id === "importFile" && t.files[0]) {
     const reader = new FileReader();
     reader.onload = () => {
@@ -1628,8 +1675,10 @@ document.addEventListener("submit", e => {
   } else if (f.id === "extraForm") {
     e.preventDefault();
     const fd = new FormData(f);
-    ensureWeek(ui.weekStart).extras.push({ id: uid(), name: fd.get("name").trim(), qty: fd.get("qty").trim(), aisle: fd.get("aisle") });
+    const name = fd.get("name").trim(), aisle = fd.get("aisle") || guessAisle(name);
+    ensureWeek(ui.weekStart).extras.push({ id: uid(), name, qty: fd.get("qty").trim(), aisle });
     save(); render();
+    toast(`${name} : rayon ${AISLES[aisle]}`);
   }
 });
 
