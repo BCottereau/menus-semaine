@@ -107,6 +107,11 @@ function seasonOf(d = new Date()) {
   if (m <= 7) return "ete";
   return "automne";
 }
+/* Saison choisie manuellement (préférence de cet appareil) ou automatique. */
+const PREFS_KEY = "menus-prefs-v1";
+const prefs = (() => { try { return JSON.parse(localStorage.getItem(PREFS_KEY)) || {}; } catch (e) { return {}; } })();
+const savePrefs = () => { try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch (e) { /* ignore */ } };
+const activeSeason = (d = new Date()) => prefs.season || seasonOf(d);
 function weekLabel(ws) {
   const diff = weeksBetween(thisWeek(), ws);
   if (diff === 0) return "Cette semaine";
@@ -335,11 +340,18 @@ const RENDERERS = {
   week: renderWeek, shopping: renderShopping, recipes: renderRecipes,
   pantry: renderPantry, ideas: renderIdeas, history: renderHistory
 };
+/** Onglet de la barre correspondant à l'écran affiché (« Idées » dépend de « Placard »). */
+const NAV_OF = { ideas: "pantry" };
 function render() {
   document.querySelectorAll(".tab").forEach(s => s.classList.toggle("active", s.id === "tab-" + ui.tab));
-  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("active", b.dataset.tab === ui.tab));
-  const s = seasonOf();
-  $("#seasonBadge").textContent = `${SEASON_ICONS[s]} ${SEASON_LABELS[s]}`;
+  document.querySelectorAll("#tabs button").forEach(b => {
+    if (b.dataset.tab === (NAV_OF[ui.tab] || ui.tab)) b.setAttribute("aria-current", "page");
+    else b.removeAttribute("aria-current");
+  });
+  const s = activeSeason();
+  const sb = $("#seasonBtn");
+  sb.innerHTML = `${icon("leaf", 16)}<span>${SEASON_LABELS[s]}</span>${prefs.season ? "" : `<span class="auto">· auto</span>`}`;
+  sb.setAttribute("aria-label", `Saison : ${SEASON_LABELS[s]}${prefs.season ? "" : " (automatique)"}. Changer la saison`);
   RENDERERS[ui.tab]();
   refreshDatalist();
   updateSyncBadge();
@@ -443,7 +455,7 @@ function openPicker(day, side = false) {
   openModal(`
     <div class="modal-head"><h2>${side ? "Petit-déj, dessert, goûter ou base" : `Dîner du ${DAYS[day].toLowerCase()} ${frDate(date, { day: "numeric", month: "long" })}`}</h2>
       <button class="icon-btn" data-action="close" aria-label="Fermer">✕</button></div>
-    ${filterBar("picker", seasonOf(parseIso(ui.weekStart)))}
+    ${filterBar("picker", activeSeason(parseIso(ui.weekStart)))}
     <div id="pickerList" class="pick-list"></div>
     <button class="btn ghost full" data-action="new-recipe">＋ Créer une nouvelle recette</button>`);
   renderPickerList();
@@ -453,7 +465,7 @@ function renderPickerList() {
   if (!el) return;
   const ws = ui.weekStart;
   const list = state.recipes
-    .filter(r => isDinner(r) !== !!ui.pickerSide && matchesFilters(r, ui.filters.picker, seasonOf(parseIso(ws))))
+    .filter(r => isDinner(r) !== !!ui.pickerSide && matchesFilters(r, ui.filters.picker, activeSeason(parseIso(ws))))
     .map(r => ({ r, info: lastMadeInfo(r.id, ws) }))
     .sort((a, b) => (a.info.warn - b.info.warn) || a.r.name.localeCompare(b.r.name, "fr"));
   el.innerHTML = list.map(({ r, info }) => `
@@ -493,7 +505,7 @@ function markCooked(i) {
 function autofill() {
   const ws = ui.weekStart;
   const w = ensureWeek(ws);
-  const season = seasonOf(parseIso(ws));
+  const season = activeSeason(parseIso(ws));
   const used = new Set(w.days.filter(Boolean));
   const catCount = {};
   w.days.forEach(id => { const r = getRecipe(id); if (r) catCount[r.category] = (catCount[r.category] || 0) + 1; });
@@ -609,14 +621,14 @@ function renderRecipes() {
         <button class="btn" data-action="paste-recipe">📥 Coller une recette</button>
         <button class="btn primary" data-action="new-recipe">＋ Nouvelle recette</button>
       </div></div>
-    ${filterBar("recipes", seasonOf())}
+    ${filterBar("recipes", activeSeason())}
     <div id="recipeList" class="cards"></div>`;
   renderRecipeList();
 }
 function renderRecipeList() {
   const el = $("#recipeList");
   if (!el) return;
-  const list = state.recipes.filter(r => matchesFilters(r, ui.filters.recipes, seasonOf()))
+  const list = state.recipes.filter(r => matchesFilters(r, ui.filters.recipes, activeSeason()))
     .sort((a, b) => a.name.localeCompare(b.name, "fr"));
   $("#recipeCount").textContent = `${list.length}/${state.recipes.length}`;
   el.innerHTML = list.map(r => {
@@ -820,7 +832,7 @@ function renderIdeas() {
       <button class="btn primary" data-action="goto" data-tab="pantry">Remplir mon garde-manger</button></div>`;
     return;
   }
-  const s = seasonOf();
+  const s = activeSeason();
   const res = state.recipes
     .filter(r => isDinner(r) && (!o.seasonOnly || r.seasons.includes(s)))
     .map(r => ({ r, a: availability(r, o.ignoreBasics) }))
@@ -858,7 +870,7 @@ function renderHistory() {
   const limit = iso(addDays(parseIso(cur), -7 * 12));
   for (const [k, w] of weeks) if (k >= limit && k <= cur) w.days.forEach(id => id && (counts[id] = (counts[id] || 0) + 1));
   const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5).filter(([id]) => getRecipe(id));
-  const s = seasonOf();
+  const s = activeSeason();
   const forgotten = state.recipes.filter(r => r.seasons.includes(s))
     .map(r => ({ r, info: lastMadeInfo(r.id, cur) }))
     .filter(x => x.info.age > RECENT_WEEKS)
@@ -912,10 +924,16 @@ function syncStatusText() {
 function updateSyncBadge() {
   const b = $("#syncBadge");
   if (!b) return;
-  const map = { off: "☁️ off", pending: "☁️ …", syncing: "☁️ ⟳", ok: "☁️ ✓", offline: "☁️ ✕", error: "☁️ ⚠️" };
-  b.textContent = map[Sync.status] || "☁️";
+  const map = {
+    off: ["cloudOff", "Synchronisation désactivée"], pending: ["cloud", "Synchronisation en attente"],
+    syncing: ["refresh", "Synchronisation en cours"], ok: ["cloudCheck", "Synchronisé"],
+    offline: ["cloudOff", "Hors ligne"], error: ["cloudAlert", "Échec de la synchronisation"]
+  };
+  const [ic, label] = map[Sync.status] || map.off;
+  b.innerHTML = icon(ic, 22);
+  b.dataset.state = Sync.status;
+  b.setAttribute("aria-label", label);
   b.title = syncStatusText();
-  b.classList.toggle("bad", Sync.status === "error");
 }
 function openSyncSettings() {
   const c = Sync.cfg;
@@ -1009,13 +1027,38 @@ function closeModal() { if (modal.open) modal.close(); }
 modal.addEventListener("click", e => { if (e.target === modal) closeModal(); });
 modal.addEventListener("close", () => { ui.pickerDay = null; ui.pickerSide = false; });
 
+const sheet = $("#sheet");
+function openSheet(html, label = "Options") {
+  $("#sheetBody").innerHTML = html;
+  sheet.setAttribute("aria-label", label);
+  if (!sheet.open) sheet.showModal();
+}
+function closeSheet() { if (sheet.open) sheet.close(); }
+sheet.addEventListener("click", e => { if (e.target === sheet) closeSheet(); });
+
+function openSeasonSheet() {
+  const cur = prefs.season || "";
+  const opts = [["", "Automatique", `selon la date : ${SEASON_LABELS[seasonOf()]}`]]
+    .concat(Object.entries(SEASON_LABELS).map(([k, v]) => [k, v, ""]));
+  openSheet(`<h2 id="seasonTitle">Saison</h2>
+    <p class="hint">Utilisée pour le filtre « de saison » et les propositions de la semaine.</p>
+    <ul class="action-list" role="radiogroup" aria-labelledby="seasonTitle">${opts.map(([k, v, d]) => `<li>
+      <button role="radio" aria-checked="${k === cur}" data-action="set-season" data-season="${k}">
+        <span>${v}${d ? `<span class="desc">${d}</span>` : ""}</span>${k === cur ? icon("check", 20) : ""}</button></li>`).join("")}</ul>`, "Choisir la saison");
+}
+
 let toastTimer;
-function toast(msg) {
-  const t = $("#toast");
-  t.textContent = msg;
+/** Message bref ; avec opts.action (libellé) et opts.onAction, affiche un bouton (ex. « Annuler »). */
+function toast(msg, opts = {}) {
+  const t = $("#toast"), btn = $("#toastAction");
+  $("#toastMsg").textContent = msg;
+  if (opts.action) {
+    btn.hidden = false; btn.textContent = opts.action;
+    btn.onclick = () => { t.classList.remove("show"); opts.onAction(); };
+  } else { btn.hidden = true; btn.onclick = null; }
   t.classList.add("show");
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove("show"), 3800);
+  toastTimer = setTimeout(() => t.classList.remove("show"), opts.duration || (opts.action ? 5000 : 3800));
 }
 
 /* ------------------------------- Actions -------------------------------- */
@@ -1174,6 +1217,13 @@ const ACTIONS = {
     save(); toast(`${n} article(s) ajouté(s) à la liste de cette semaine.`);
   },
 
+  "season-sheet": () => openSeasonSheet(),
+  "set-season": el => {
+    prefs.season = el.dataset.season || "";
+    if (!prefs.season) delete prefs.season;
+    savePrefs(); closeSheet(); render();
+    toast(prefs.season ? `Saison : ${SEASON_LABELS[prefs.season]}` : "Saison automatique");
+  },
   "paste-recipe": () => openPasteRecipe(),
   "sync-settings": () => openSyncSettings(),
   "sync-now": () => Sync.syncNow(),
@@ -1300,6 +1350,9 @@ function safeRender() {
   if (modal.open && ui.pickerDay !== null) renderPickerList();
 }
 document.addEventListener("focusout", () => setTimeout(() => { if (renderPending) { renderPending = false; safeRender(); } }, 50));
+
+document.querySelectorAll("[data-icon]").forEach(el => { el.innerHTML = icon(el.dataset.icon, 24); });
+$("#brandIcon").innerHTML = icon("utensils", 20);
 
 Store.afterSave = () => Sync.schedule();
 Store.save(state);

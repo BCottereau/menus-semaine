@@ -3,48 +3,55 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#faf7f2" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#0e0e10" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#0E0E10">
+  <meta name="color-scheme" content="dark">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Menus">
   <title>Menus de la semaine</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥕</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23E8735A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2'/><path d='M7 2v20'/><path d='M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <header class="topbar">
-    <h1>🥕 Menus<span class="hide-sm"> de la semaine</span></h1>
-    <div class="topbar-right">
-      <button id="syncBadge" class="season-pill sync-pill" data-action="sync-settings" title="Synchronisation">☁️</button>
-      <span id="seasonBadge" class="season-pill"></span>
+  <header class="appbar">
+    <div class="brand" aria-hidden="true"><span id="brandIcon"></span>Menus</div>
+    <div class="appbar-actions">
+      <button id="seasonBtn" class="season-btn" data-action="season-sheet" aria-haspopup="dialog"></button>
+      <button id="syncBadge" class="round-btn" data-action="sync-settings" aria-label="Synchronisation"></button>
     </div>
   </header>
 
-  <nav class="tabs" id="tabs" aria-label="Navigation">
-    <button data-tab="week" class="active"><span class="ico">📅</span><span>Semaine</span></button>
-    <button data-tab="shopping"><span class="ico">🛒</span><span>Courses</span></button>
-    <button data-tab="recipes"><span class="ico">📖</span><span>Recettes</span></button>
-    <button data-tab="pantry"><span class="ico">🥫</span><span>Placard</span></button>
-    <button data-tab="ideas"><span class="ico">💡</span><span>Idées</span></button>
-    <button data-tab="history"><span class="ico">🕘</span><span>Historique</span></button>
+  <nav class="tabbar" id="tabs" aria-label="Navigation principale">
+    <button data-tab="week"><span class="tab-ico" data-icon="calendar"></span><span class="tab-label">Semaine</span></button>
+    <button data-tab="shopping"><span class="tab-ico" data-icon="cart"></span><span class="tab-label">Courses</span></button>
+    <button data-tab="recipes"><span class="tab-ico" data-icon="book"></span><span class="tab-label">Recettes</span></button>
+    <button data-tab="pantry"><span class="tab-ico" data-icon="package"></span><span class="tab-label">Placard</span></button>
+    <button data-tab="history"><span class="tab-ico" data-icon="history"></span><span class="tab-label">Historique</span></button>
   </nav>
 
   <main>
-    <section id="tab-week" class="tab active"></section>
-    <section id="tab-shopping" class="tab"></section>
-    <section id="tab-recipes" class="tab"></section>
-    <section id="tab-pantry" class="tab"></section>
-    <section id="tab-ideas" class="tab"></section>
-    <section id="tab-history" class="tab"></section>
+    <section id="tab-week" class="tab active" aria-labelledby="h-week"></section>
+    <section id="tab-shopping" class="tab" aria-labelledby="h-shopping"></section>
+    <section id="tab-recipes" class="tab" aria-labelledby="h-recipes"></section>
+    <section id="tab-pantry" class="tab" aria-labelledby="h-pantry"></section>
+    <section id="tab-ideas" class="tab" aria-labelledby="h-ideas"></section>
+    <section id="tab-history" class="tab" aria-labelledby="h-history"></section>
   </main>
 
-  <dialog id="modal"><div id="modalBody" class="modal-inner"></div></dialog>
-  <div id="toast" role="status" aria-live="polite"></div>
+  <!-- Fenêtre (recette, choix d'un dîner…) et feuille du bas (filtres, ajout…) -->
+  <dialog id="modal" aria-label="Détail"><div id="modalBody" class="modal-inner"></div></dialog>
+  <dialog id="sheet" class="sheet" aria-label="Options"><div id="sheetBody" class="sheet-inner"></div></dialog>
+
+  <div id="toast" role="status" aria-live="polite"><span id="toastMsg"></span><button id="toastAction" type="button" hidden></button></div>
   <datalist id="ingNames"></datalist>
   <input type="file" id="importFile" accept="application/json,.json" hidden>
 
-  <!-- Scripts classiques (pas de modules) : fonctionne en ouvrant directement le fichier -->
+  <!-- Scripts classiques (pas de modules) : fonctionne aussi en ouvrant directement le fichier -->
+  <script src="js/icons.js"></script>
   <script src="js/recipes.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/sync.js"></script>
