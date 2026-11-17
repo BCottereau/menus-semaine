@@ -1,0 +1,102 @@
+{
+ "2026": {
+  "winner": "French Polynesia",
+  "ru": [
+   "New Caledonia",
+   "Normandy",
+   "Guadeloupe",
+   "Roussillon"
+  ],
+  "top12": [
+   "French Polynesia",
+   "New Caledonia",
+   "Normandy",
+   "Guadeloupe",
+   "Roussillon",
+   "Languedoc-Roussillon",
+   "Auvergne",
+   "Île-de-France",
+   "Champagne-Ardenne",
+   "Nice Côte d'Azur",
+   "Limousin",
+   "Picardy"
+  ]
+ },
+ "2025": {
+  "winner": "Martinique",
+  "ru": [
+   "Nord-Pas-de-Calais",
+   "Corsica",
+   "Guadeloupe",
+   "Nice Côte d'Azur"
+  ],
+  "top15": [
+   "Martinique",
+   "Nord-Pas-de-Calais",
+   "Corsica",
+   "Guadeloupe",
+   "Nice Côte d'Azur",
+   "Burgundy",
+   "Aquitaine",
+   "Picardy",
+   "Lorraine",
+   "Normandy",
+   "Alsace",
+   "Midi-Pyrénées",
+   "French Polynesia",
+   "Champagne-Ardenne",
+   "Rhône-Alpes"
+  ]
+ },
+ "2024": {
+  "winner": "Nord-Pas-de-Calais",
+  "top12": [
+   "Nord-Pas-de-Calais",
+   "French Guiana",
+   "Provence",
+   "Guadeloupe",
+   "Languedoc-Roussillon",
+   "Normandy",
+   "French Polynesia",
+   "Île-de-France",
+   "Pays de la Loire",
+   "Burgundy",
+   "Roussillon",
+   "Nice Côte d'Azur"
+  ]
+ },
+ "2023": {
+  "winner": "Guadeloupe",
+  "top12": [
+   "Guadeloupe",
+   "Nord-Pas-de-Calais",
+   "Franche-Comté",
+   "Martinique",
+   "Auvergne",
+   "Nice Côte d'Azur",
+   "Lorraine",
+   "Midi-Pyrénées",
+   "Picardy",
+   "Languedoc",
+   "Rhône-Alpes",
+   "Pays de la Loire"
+  ]
+ },
+ "2022": {
+  "winner": "Île-de-France",
+  "top12": [
+   "Île-de-France",
+   "Martinique",
+   "Alsace",
+   "French Polynesia",
+   "Normandy",
+   "Aquitaine",
+   "Réunion",
+   "Nord-Pas-de-Calais",
+   "Rhône-Alpes",
+   "Nice Côte d'Azur",
+   "Lorraine",
+   "Pays de la Loire"
+  ]
+ }
+}

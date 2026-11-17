@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1026">
+  <meta name="color-scheme" content="dark">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Miss PickEm">
+  <meta name="description" content="Pronostics entre amis pour l'élection de Miss France 2027">
+  <title>Miss France PickEm</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e3c27a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z'/><path d='M5 21h14'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="hero">
+    <p class="eyebrow">Samedi 12 décembre 2026 · TF1</p>
+    <h1>Miss France <em>2027</em></h1>
+    <p class="hero-sub"><span>PickEm entre amis</span><span class="dot" aria-hidden="true"></span><span id="countdown"></span></p>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button role="tab" data-action="tab" data-tab="pick" aria-selected="true">Mon pronostic</button>
+    <button role="tab" data-action="tab" data-tab="cands" aria-selected="false">Candidates</button>
+    <button role="tab" data-action="tab" data-tab="rank" aria-selected="false">Classement</button>
+  </nav>
+
+  <main>
+    <section id="tab-pick" class="tab" role="tabpanel"></section>
+    <section id="tab-cands" class="tab" role="tabpanel" hidden></section>
+    <section id="tab-rank" class="tab" role="tabpanel" hidden></section>
+  </main>
+
+  <footer class="foot">
+    Arena Futuroscope · présentée par Jean-Pierre Foucault · 31 candidates, Top 12 en finale.<br>
+    App privée, sans serveur : vos pronostics restent dans votre navigateur et dans les liens que vous partagez.
+  </footer>
+
+  <dialog id="sheet" aria-labelledby="sheet-title"></dialog>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <div id="ghost" aria-hidden="true"></div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

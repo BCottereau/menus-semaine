@@ -1,0 +1,522 @@
+{
+ "winners": [
+  {
+   "year": 1920,
+   "name": "Agnès Souret",
+   "region": "Aquitaine"
+  },
+  {
+   "year": 1921,
+   "name": "Pauline Pô",
+   "region": "Corsica"
+  },
+  {
+   "year": 1927,
+   "name": "Roberte Cusey",
+   "region": "Franche-Comté"
+  },
+  {
+   "year": 1928,
+   "name": "Raymonde Allain",
+   "region": "Brittany"
+  },
+  {
+   "year": 1929,
+   "name": "Madeleine Mourgues",
+   "region": "Languedoc-Roussillon"
+  },
+  {
+   "year": 1930,
+   "name": "Yvette Labrousse",
+   "region": "Rhône-Alpes"
+  },
+  {
+   "year": 1931,
+   "name": "Jeanne Juillia",
+   "region": "Aquitaine"
+  },
+  {
+   "year": 1932,
+   "name": "Lyne Quesson de Souza",
+   "region": "Nice Côte d'Azur"
+  },
+  {
+   "year": 1933,
+   "name": "Jacqueline Bertin",
+   "region": "Île-de-France"
+  },
+  {
+   "year": 1934,
+   "name": "Simone Barillier",
+   "region": "Île-de-France"
+  },
+  {
+   "year": 1935,
+   "name": "Elisabeth Pitz",
+   "region": "Saar"
+  },
+  {
+   "year": 1936,
+   "name": "Lynne Lassal",
+   "region": "Picardy"
+  },
+  {
+   "year": 1937,
+   "name": "Jacqueline Janet",
+   "region": "Brittany"
+  },
+  {
+   "year": 1938,
+   "name": "Annie Garrigues",
+   "region": "Roussillon"
+  },
+  {
+   "year": 1939,
+   "name": "Ginette Catriens",
+   "region": "Île-de-France"
+  },
+  {
+   "year": 1940,
+   "name": "Joséphine Ladwig",
+   "region": "Alsace"
+  },
+  {
+   "year": 1947,
+   "name": "Yvonne Viseux",
+   "region": "Nice Côte d'Azur"
+  },
+  {
+   "year": 1948,
+   "name": "Jacqueline Donny",
+   "region": "Île-de-France"
+  },
+  {
+   "year": 1949,
+   "name": "Juliette Figueras",
+   "region": "Île-de-France"
+  },
+  {
+   "year": 1950,
+   "name": "Maryse Delort",
+   "region": "Île-de-France"
+  },
+  {
+   "year": 1951,
+   "name": "Nicole Drouin",
+   "region": "Nice Côte d'Azur"
+  },
+  {
+   "year": 1952,
+   "name": "Josiane Pouy",
+   "region": "Aquitaine"
+  },
+  {
+   "year": 1953,
+   "name": "Sylviane Carpentier",
+   "region": "Picardy"
+  },
+  {
+   "year": 1954,
+   "name": "Irène Tunc",
+   "region": "Nice Côte d'Azur"
+  },
+  {
+   "year": 1955,
+   "name": "Véronique Zuber",
+   "region": "Île-de-France"
+  },
+  {
+   "year": 1956,
+   "name": "Gisèle Charbit",
+   "region": "Morocco"
+  },
+  {
+   "year": 1957,
+   "name": "Sylvie-Rosine Numez",
+   "region": "Rhône-Alpes"
+  },
+  {
+   "year": 1958,
+   "name": "Monique Negler",
+   "region": "Normandy"
+  },
+  {
+   "year": 1959,
+   "name": "Monique Chiron",
+   "region": "Poitou-Charentes"
+  },
+  {
+   "year": 1960,
+   "name": "Brigitte Barazer de Lannurien",
+   "region": "Brittany"
+  },
+  {
+   "year": 1961,
+   "name": "Michèle Wargnier",
+   "region": "Brittany"
+  },
+  {
+   "year": 1962,
+   "name": "Monique Lemaire",
+   "region": "Brittany"
+  },
+  {
+   "year": 1963,
+   "name": "Muguette Fabris",
+   "region": "Île-de-France"
+  },
+  {
+   "year": 1964,
+   "name": "Arlette Collot",
+   "region": "Burgundy"
+  },
+  {
+   "year": 1965,
+   "name": "Christiane Sibellin",
+   "region": "Rhône-Alpes"
+  },
+  {
+   "year": 1966,
+   "name": "Michèle Boulé",
+   "region": "Nice Côte d'Azur"
+  },
+  {
+   "year": 1967,
+   "name": "Jeanne Beck",
+   "region": "Normandy"
+  },
+  {
+   "year": 1968,
+   "name": "Christiane Lillio",
+   "region": "Rhône-Alpes"
+  },
+  {
+   "year": 1969,
+   "name": "Suzanne Angly",
+   "region": "Alsace"
+  },
+  {
+   "year": 1970,
+   "name": "Michelle Beaurain",
+   "region": "Île-de-France"
+  },
+  {
+   "year": 1971,
+   "name": "Myriam Stocco",
+   "region": "Languedoc-Roussillon"
+  },
+  {
+   "year": 1972,
+   "name": "Chantal Bouvier de la Motte",
+   "region": "Île-de-France"
+  },
+  {
+   "year": 1973,
+   "name": "Isabelle Nadia Krumacker",
+   "region": "Lorraine"
+  },
+  {
+   "year": 1974,
+   "name": "Edna Tepava",
+   "region": "French Polynesia"
+  },
+  {
+   "year": 1975,
+   "name": "Sophie Perin",
+   "region": "Lorraine"
+  },
+  {
+   "year": 1976,
+   "name": "Monique Uldaric",
+   "region": "Réunion"
+  },
+  {
+   "year": 1977,
+   "name": "Véronique Fagot",
+   "region": "Poitou-Charentes"
+  },
+  {
+   "year": 1978,
+   "name": "Pascale Taurua",
+   "region": "New Caledonia"
+  },
+  {
+   "year": 1979,
+   "name": "Sylvie Hélène Marie Parera",
+   "region": "Provence"
+  },
+  {
+   "year": 1980,
+   "name": "Thilda Fuller",
+   "region": "French Polynesia"
+  },
+  {
+   "year": 1981,
+   "name": "Isabelle Sophie Benard",
+   "region": "Normandy"
+  },
+  {
+   "year": 1982,
+   "name": "Sabrina Belleval",
+   "region": "Nice Côte d'Azur"
+  },
+  {
+   "year": 1983,
+   "name": "Isabelle Turpault",
+   "region": "Île-de-France"
+  },
+  {
+   "year": 1984,
+   "name": "Martine Robine",
+   "region": "Normandy"
+  },
+  {
+   "year": 1985,
+   "name": "Suzanne Iskandar",
+   "region": "Alsace"
+  },
+  {
+   "year": 1986,
+   "name": "Valérie Pascale",
+   "region": "Île-de-France"
+  },
+  {
+   "year": 1987,
+   "name": "Nathalie Marquay",
+   "region": "Alsace"
+  },
+  {
+   "year": 1988,
+   "name": "Sylvie Bertin",
+   "region": "Rhône-Alpes"
+  },
+  {
+   "year": 1989,
+   "name": "Stephanie (Peggy) Zlotkowski",
+   "region": "Aquitaine"
+  },
+  {
+   "year": 1990,
+   "name": "Gaëlle Voiry",
+   "region": "Aquitaine"
+  },
+  {
+   "year": 1991,
+   "name": "Mareva Georges",
+   "region": "French Polynesia"
+  },
+  {
+   "year": 1992,
+   "name": "Linda Hardy",
+   "region": "Pays de la Loire"
+  },
+  {
+   "year": 1993,
+   "name": "Véronique de la Cruz",
+   "region": "Guadeloupe"
+  },
+  {
+   "year": 1994,
+   "name": "Valérie Claisse",
+   "region": "Pays de la Loire"
+  },
+  {
+   "year": 1995,
+   "name": "Mélody Vilbert",
+   "region": "Aquitaine"
+  },
+  {
+   "year": 1996,
+   "name": "Laure Belleville",
+   "region": "Rhône-Alpes"
+  },
+  {
+   "year": 1997,
+   "name": "Patricia Spehar",
+   "region": "Île-de-France"
+  },
+  {
+   "year": 1998,
+   "name": "Sophie Thalmann",
+   "region": "Lorraine"
+  },
+  {
+   "year": 1999,
+   "name": "Mareva Galanter",
+   "region": "French Polynesia"
+  },
+  {
+   "year": 2000,
+   "name": "Sonia Rolland",
+   "region": "Burgundy"
+  },
+  {
+   "year": 2001,
+   "name": "Élodie Gossuin",
+   "region": "Picardy"
+  },
+  {
+   "year": 2002,
+   "name": "Sylvie Tellier",
+   "region": "Rhône-Alpes"
+  },
+  {
+   "year": 2003,
+   "name": "Corinne Coman",
+   "region": "Guadeloupe"
+  },
+  {
+   "year": 2004,
+   "name": "Lætitia Bléger",
+   "region": "Alsace"
+  },
+  {
+   "year": 2005,
+   "name": "Cindy Fabre",
+   "region": "Normandy"
+  },
+  {
+   "year": 2006,
+   "name": "Alexandra Rosenfeld",
+   "region": "Languedoc"
+  },
+  {
+   "year": 2007,
+   "name": "Rachel Legrain-Trapani",
+   "region": "Picardy"
+  },
+  {
+   "year": 2008,
+   "name": "Valérie Bègue",
+   "region": "Réunion"
+  },
+  {
+   "year": 2009,
+   "name": "Chloé Mortaud",
+   "region": "Midi-Pyrénées"
+  },
+  {
+   "year": 2010,
+   "name": "Malika Ménard",
+   "region": "Normandy"
+  },
+  {
+   "year": 2011,
+   "name": "Laury Thilleman",
+   "region": "Brittany"
+  },
+  {
+   "year": 2012,
+   "name": "Delphine Wespiser",
+   "region": "Alsace"
+  },
+  {
+   "year": 2013,
+   "name": "Marine Lorphelin",
+   "region": "Burgundy"
+  },
+  {
+   "year": 2014,
+   "name": "Flora Coquerel",
+   "region": "Centre-Val de Loire"
+  },
+  {
+   "year": 2015,
+   "name": "Camille Cerf",
+   "region": "Nord-Pas-de-Calais"
+  },
+  {
+   "year": 2016,
+   "name": "Iris Mittenaere",
+   "region": "Nord-Pas-de-Calais"
+  },
+  {
+   "year": 2017,
+   "name": "Alicia Aylies",
+   "region": "French Guiana"
+  },
+  {
+   "year": 2018,
+   "name": "Maëva Coucke",
+   "region": "Nord-Pas-de-Calais"
+  },
+  {
+   "year": 2019,
+   "name": "Vaimalama Chaves",
+   "region": "French Polynesia"
+  },
+  {
+   "year": 2020,
+   "name": "Clémence Botino",
+   "region": "Guadeloupe"
+  },
+  {
+   "year": 2021,
+   "name": "Amandine Petit",
+   "region": "Normandy"
+  },
+  {
+   "year": 2022,
+   "name": "Diane Leyre",
+   "region": "Île-de-France"
+  },
+  {
+   "year": 2023,
+   "name": "Indira Ampiot",
+   "region": "Guadeloupe"
+  },
+  {
+   "year": 2024,
+   "name": "Eve Gilles",
+   "region": "Nord-Pas-de-Calais"
+  },
+  {
+   "year": 2025,
+   "name": "Angélique Angarni-Filopon",
+   "region": "Martinique"
+  },
+  {
+   "year": 2026,
+   "name": "Hinaupoko Devèze",
+   "region": "French Polynesia"
+  }
+ ],
+ "replacements": [
+  {
+   "year": 1935,
+   "name": "Gisèle Préville",
+   "region": "Île-de-France",
+   "replaced": "Elisabeth Pitz"
+  },
+  {
+   "year": 1964,
+   "name": "Jacqueline Gayraud",
+   "region": "Pays de la Loire",
+   "replaced": "Arlette Collot"
+  },
+  {
+   "year": 1972,
+   "name": "Claudine Cassereau",
+   "region": "Poitou-Charentes",
+   "replaced": "Chantal Bouvier de la Motte"
+  },
+  {
+   "year": 1978,
+   "name": "Brigitte Konjovic",
+   "region": "Île-de-France",
+   "replaced": "Pascale Taurua"
+  },
+  {
+   "year": 1980,
+   "name": "Patricia Barzyk",
+   "region": "Franche-Comté",
+   "replaced": "Thilda Fuller"
+  },
+  {
+   "year": 1983,
+   "name": "Frédérique Marcelle Leroy",
+   "region": "Aquitaine",
+   "replaced": "Isabelle Turpault"
+  }
+ ]
+}
