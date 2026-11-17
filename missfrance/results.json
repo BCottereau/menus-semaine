@@ -1,6 +1,0 @@
-{
-  "_aide": "Le soir de l'election : remplissez ce fichier puis poussez-le sur GitHub (l'app le relit toutes les 90 s). Une candidate = son id (1 a 31), sa region (\"Alsace\", \"Tahiti\"...) ou son nom. top12 = les 12 qualifiees, ordre libre (inutile d'y repeter le Top 5). Laissez null / [] ce qui n'est pas encore connu.",
-  "top12": [],
-  "miss_france": null,
-  "dauphines": [null, null, null, null]
-}
