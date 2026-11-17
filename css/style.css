@@ -366,3 +366,30 @@ ul.simple li { padding: 4px 0; }
 .side-name { display: block; font-weight: 500; }
 .side-row.cooked .side-name { color: var(--text-muted); text-decoration: line-through; }
 .icon-btn.is-done { color: var(--success); }
+
+/* =====================================================================
+   Écran Recettes, choix d'un dîner, feuille de filtres
+   ===================================================================== */
+.recipe-card {
+  display: flex; flex-direction: column; gap: 8px; width: 100%; padding: 14px 16px; text-align: left;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card); color: var(--text); font: inherit; cursor: pointer;
+}
+.recipe-card:hover { border-color: #3A3A41; }
+.rc-title { font-size: 16px; font-weight: 600; line-height: 1.3; }
+.rc-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; color: var(--text-muted); font-size: 14px; margin: 0; }
+.rc-meta span { display: inline-flex; align-items: center; gap: 5px; }
+.rc-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.rc-foot .tags { margin: 0; }
+.rc-last { color: var(--text-muted); font-size: 13px; white-space: nowrap; }
+.cards.one { grid-template-columns: 1fr; }
+.modal-inner .chips { margin-left: -16px; margin-right: -16px; }
+.modal-inner .sub { color: var(--text-muted); font-size: 14px; margin: 0 4px 8px; }
+.sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sheet-label { font-size: 14px; font-weight: 600; color: var(--text-muted); margin: 18px 0 8px; }
+.seg { display: flex; flex-wrap: wrap; gap: 8px; }
+.seg button {
+  min-height: var(--tap); padding: 0 14px; border: 1px solid var(--border); border-radius: var(--r-pill);
+  background: var(--surface-3); color: var(--text-2); font: inherit; font-size: 14px; font-weight: 500; cursor: pointer;
+}
+.seg button[aria-checked="true"], .seg button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--text); }
+.sheet-cta { margin-top: 24px; min-height: 52px; font-size: 16px; }

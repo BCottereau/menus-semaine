@@ -129,8 +129,8 @@ const ui = {
   weekStart: defaultWeekStart(),
   pickerDay: null,
   filters: {
-    recipes: { q: "", season: "", cat: "", meat: "", cookeo: false },
-    picker: { q: "", season: "current", cat: "", meat: "", cookeo: false }
+    recipes: { q: "", season: "", cat: "", meat: "", cookeo: false, quick: false, ings: [] },
+    picker: { q: "", season: "current", cat: "", meat: "", cookeo: false, quick: false, ings: [] }
   },
   ideas: { ignoreBasics: true, maxMissing: 3, seasonOnly: false },
   showCovered: false,
@@ -302,37 +302,101 @@ function matchesFilters(r, f, seasonCtx) {
   if (f.meat === "non" && r.meat) return false;
   if (f.meat === "oui" && !r.meat) return false;
   if (f.cookeo && !r.cookeo) return false;
+  if (f.quick && !(r.time && r.time <= 30)) return false;
+  if (f.ings && f.ings.length) {
+    const keys = f.ings.map(matchKey);
+    if (!r.ingredients.some(i => keys.some(k => namesMatch(matchKey(i.name), k)))) return false;
+  }
   return true;
 }
-function filterBar(scope, seasonCtx) {
+const seasonCtxOf = scope => scope === "picker" ? activeSeason(parseIso(ui.weekStart)) : activeSeason();
+/** Filtres actifs (hors recherche et raccourcis Cookeo / rapide), sous forme de chips retirables. */
+function activeFilterChips(scope) {
+  const f = ui.filters[scope], out = [];
+  if (f.season) out.push(["season", f.season === "current" ? `De saison (${SEASON_LABELS[seasonCtxOf(scope)]})` : SEASON_LABELS[f.season]]);
+  if (f.cat) out.push(["cat", f.cat]);
+  if (f.meat) out.push(["meat", f.meat === "non" ? "Végé" : "Avec viande"]);
+  if (f.ings && f.ings.length) out.push(["ings", `Avec : ${f.ings.slice(0, 2).join(", ")}${f.ings.length > 2 ? "…" : ""}`]);
+  return out;
+}
+function filterCount(scope) {
   const f = ui.filters[scope];
-  const opt = (v, label, cur) => `<option value="${v}" ${cur === v ? "selected" : ""}>${label}</option>`;
-  return `<div class="filters" data-scope="${scope}">
-    <input type="search" data-filter="q" placeholder="🔍 Nom ou ingrédient…" value="${esc(f.q)}">
-    <select data-filter="season" aria-label="Saison">
-      ${opt("current", `De saison (${SEASON_ICONS[seasonCtx]} ${SEASON_LABELS[seasonCtx]})`, f.season)}
-      ${opt("", "Toutes saisons", f.season)}
-      ${Object.keys(SEASON_LABELS).map(s => opt(s, `${SEASON_ICONS[s]} ${SEASON_LABELS[s]}`, f.season)).join("")}
-    </select>
-    <select data-filter="cat" aria-label="Catégorie">
-      ${opt("", "Toutes catégories", f.cat)}
-      ${allCategories().map(c => opt(c, c, f.cat)).join("")}
-    </select>
-    <select data-filter="meat" aria-label="Végétarien ou avec viande">
-      ${opt("", "Végé ou avec viande", f.meat)}
-      ${opt("non", "🌿 Végé (pour nous deux)", f.meat)}
-      ${opt("oui", "🍖 Avec viande · Baptiste", f.meat)}
-    </select>
-    <label class="chk"><input type="checkbox" data-filter="cookeo" ${f.cookeo ? "checked" : ""}> Cookeo</label>
-  </div>`;
+  return activeFilterChips(scope).length + (f.cookeo ? 1 : 0) + (f.quick ? 1 : 0);
+}
+function chipRow(scope) {
+  const f = ui.filters[scope], n = filterCount(scope);
+  return `<button class="chip" data-action="filter-sheet" data-scope="${scope}" aria-haspopup="dialog">${icon("sliders", 16)} Filtres${n ? `<span class="count" aria-label="${n} actifs">${n}</span>` : ""}</button>
+    ${activeFilterChips(scope).map(([k, label]) => `<button class="chip" aria-pressed="true" data-action="chip-clear" data-scope="${scope}" data-key="${k}" aria-label="Retirer le filtre ${esc(label)}">${esc(label)} ${icon("x", 14)}</button>`).join("")}
+    <button class="chip" aria-pressed="${f.cookeo}" data-action="chip-toggle" data-scope="${scope}" data-key="cookeo">Cookeo${f.cookeo ? " " + icon("x", 14) : ""}</button>
+    <button class="chip" aria-pressed="${f.quick}" data-action="chip-toggle" data-scope="${scope}" data-key="quick">${icon("clock", 16)} Moins de 30 min${f.quick ? " " + icon("x", 14) : ""}</button>`;
+}
+function filterControls(scope) {
+  const f = ui.filters[scope];
+  return `<div class="search"><label for="q-${scope}" class="sr-only">Rechercher une recette</label>${icon("search", 20)}
+      <input type="search" id="q-${scope}" data-filter="q" data-scope="${scope}" placeholder="Nom ou ingrédient" value="${esc(f.q)}" autocomplete="off"></div>
+    <div class="chips" id="chips-${scope}" role="toolbar" aria-label="Filtres">${chipRow(scope)}</div>`;
+}
+function refreshFilters(scope) {
+  const c = $("#chips-" + scope);
+  if (c) c.innerHTML = chipRow(scope);
+  (scope === "picker" ? renderPickerList : renderRecipeList)();
+  if (sheet.open && $("#filterSheet")) openFilterSheet(scope);
+}
+function openFilterSheet(scope) {
+  const f = ui.filters[scope];
+  const n = state.recipes.filter(r => (scope !== "picker" || isDinner(r) !== !!ui.pickerSide) && matchesFilters(r, f, seasonCtxOf(scope))).length;
+  const seg = (key, opts) => `<div class="seg" role="radiogroup">${opts.map(([v, l]) =>
+    `<button role="radio" aria-checked="${f[key] === v}" data-action="set-filter" data-scope="${scope}" data-key="${key}" data-value="${esc(v)}">${esc(l)}</button>`).join("")}</div>`;
+  openSheet(`<div id="filterSheet">
+    <div class="sheet-head"><h2>Filtres</h2><button class="btn small ghost" data-action="reset-filters" data-scope="${scope}">Réinitialiser</button></div>
+    <h3 class="sheet-label">Saison</h3>
+    ${seg("season", [["", "Toutes"], ["current", `De saison (${SEASON_LABELS[seasonCtxOf(scope)]})`], ...Object.entries(SEASON_LABELS)])}
+    <h3 class="sheet-label">Catégorie</h3>
+    <label class="sr-only" for="fs-cat">Catégorie</label>
+    <select id="fs-cat" data-filter="cat" data-scope="${scope}"><option value="">Toutes les catégories</option>
+      ${allCategories().map(c => `<option ${f.cat === c ? "selected" : ""}>${esc(c)}</option>`).join("")}</select>
+    <h3 class="sheet-label">Végé ou viande</h3>
+    ${seg("meat", [["", "Tout"], ["non", "Végé (pour nous deux)"], ["oui", "Avec viande"]])}
+    <h3 class="sheet-label">Préparation</h3>
+    <div class="seg">
+      <button aria-pressed="${f.cookeo}" data-action="chip-toggle" data-scope="${scope}" data-key="cookeo">Cookeo</button>
+      <button aria-pressed="${f.quick}" data-action="chip-toggle" data-scope="${scope}" data-key="quick">Moins de 30 min</button>
+    </div>
+    <button class="btn primary full sheet-cta" data-action="close-sheet">Voir ${n} recette${n > 1 ? "s" : ""}</button>
+  </div>`, "Filtres");
 }
 
+/** Étiquettes neutres (sans code couleur) : catégorie, saisons, Cookeo, viande. */
 function badges(r) {
-  const seasons = r.seasons.length === 4 ? "Toute l'année" : r.seasons.map(s => SEASON_ICONS[s] + " " + SEASON_LABELS[s]).join(" · ");
-  return `<span class="badge cat">${esc(r.category)}</span>`
-    + `<span class="badge season">${seasons}</span>`
-    + (r.cookeo ? `<span class="badge cookeo">Cookeo</span>` : "")
-    + (r.meat ? `<span class="badge meat">🍖 Avec viande · Baptiste</span>` : `<span class="badge veg">🌿 Végé</span>`);
+  const seasons = r.seasons.length === 4 ? "Toute l'année" : r.seasons.map(s => SEASON_LABELS[s]).join(", ");
+  return `<span class="tag">${esc(r.category)}</span><span class="tag">${seasons}</span>`
+    + (r.cookeo ? `<span class="tag">Cookeo</span>` : "")
+    + (r.meat ? `<span class="tag">Avec viande · Baptiste</span>` : "");
+}
+
+/** Dernier jour (passé) où la recette était au planning, ou null. */
+function lastCookedDate(rid) {
+  const today = iso(new Date());
+  let best = null;
+  for (const [ws, w] of Object.entries(state.weeks)) {
+    w.days.forEach((id, i) => {
+      if (id !== rid) return;
+      const d = iso(addDays(parseIso(ws), i));
+      if (d <= today && (!best || d > best)) best = d;
+    });
+    if ((w.sides || []).some(x => x.r === rid) && ws <= today && (!best || ws > best)) best = ws;
+  }
+  return best;
+}
+function lastCookedLabel(rid) {
+  const d = lastCookedDate(rid);
+  if (!d) return "";
+  const days = Math.round((parseIso(iso(new Date())) - parseIso(d)) / 864e5);
+  if (days <= 0) return "Aujourd'hui";
+  if (days === 1) return "Cuisiné hier";
+  if (days < 7) return `Il y a ${days} jours`;
+  const wk = Math.round(days / 7);
+  return wk < 9 ? `Il y a ${wk} sem.` : `Il y a ${Math.round(days / 30)} mois`;
 }
 
 /* ------------------------------- Rendu ---------------------------------- */
@@ -525,10 +589,11 @@ function openPicker(day, side = false) {
   const date = side ? null : addDays(parseIso(ui.weekStart), day);
   openModal(`
     <div class="modal-head"><h2>${side ? "Petit-déj, dessert, goûter ou base" : `Dîner du ${DAYS[day].toLowerCase()} ${frDate(date, { day: "numeric", month: "long" })}`}</h2>
-      <button class="icon-btn" data-action="close" aria-label="Fermer">✕</button></div>
-    ${filterBar("picker", activeSeason(parseIso(ui.weekStart)))}
-    <div id="pickerList" class="pick-list"></div>
-    <button class="btn ghost full" data-action="new-recipe">＋ Créer une nouvelle recette</button>`);
+      <button class="icon-btn" data-action="close" aria-label="Fermer">${icon("x", 22)}</button></div>
+    ${filterControls("picker")}
+    <p class="sub" id="pickerCount"></p>
+    <div id="pickerList" class="cards one"></div>
+    <button class="btn ghost full" data-action="new-recipe">${icon("plus", 18)} Créer une nouvelle recette</button>`);
   renderPickerList();
 }
 function renderPickerList() {
@@ -539,12 +604,9 @@ function renderPickerList() {
     .filter(r => isDinner(r) !== !!ui.pickerSide && matchesFilters(r, ui.filters.picker, activeSeason(parseIso(ws))))
     .map(r => ({ r, info: lastMadeInfo(r.id, ws) }))
     .sort((a, b) => (a.info.warn - b.info.warn) || a.r.name.localeCompare(b.r.name, "fr"));
-  el.innerHTML = list.map(({ r, info }) => `
-    <button class="pick-item ${info.warn ? "warn" : ""}" data-action="pick" data-id="${r.id}">
-      <span class="pick-name">${esc(r.name)}</span>
-      <span class="badges">${badges(r)}</span>
-      <span class="small ${info.warn ? "warn-text" : "muted"}">${r.time ? r.time + " min · " : ""}${info.warn ? "⚠️ " : ""}${info.txt}</span>
-    </button>`).join("") || `<p class="empty">Aucune recette ne correspond aux filtres.</p>`;
+  const c = $("#pickerCount");
+  if (c) c.textContent = `${list.length} recette${list.length > 1 ? "s" : ""}`;
+  el.innerHTML = list.map(({ r }) => recipeCard(r, "pick")).join("") || `<p class="empty">Aucune recette ne correspond aux filtres.</p>`;
 }
 
 function addSide(rid) {
@@ -689,29 +751,43 @@ function downloadFile(name, content, type) {
 /* ---------- Onglet Recettes ---------- */
 function renderRecipes() {
   $("#tab-recipes").innerHTML = `
-    <div class="section-head"><h2>Recettes <small id="recipeCount"></small></h2>
-      <div class="toolbar tight">
-        <button class="btn" data-action="paste-recipe">📥 Coller une recette</button>
-        <button class="btn primary" data-action="new-recipe">＋ Nouvelle recette</button>
+    <div class="page-head"><div><h1 id="h-recipes">Recettes</h1><p class="sub" id="recipeCount"></p></div>
+      <div class="page-head-actions">
+        <button class="round-btn" data-action="paste-recipe" aria-label="Coller une recette" title="Coller une recette">${icon("clipboard", 20)}</button>
+        <button class="round-btn accent" data-action="new-recipe" aria-label="Nouvelle recette" title="Nouvelle recette">${icon("plus", 22)}</button>
       </div></div>
-    ${filterBar("recipes", activeSeason())}
+    ${filterControls("recipes")}
     <div id="recipeList" class="cards"></div>`;
   renderRecipeList();
+}
+function recipeCard(r, action = "view") {
+  const last = lastCookedLabel(r.id);
+  const meta = [
+    r.time ? `<span>${icon("clock", 15)} ${r.time} min</span>` : "",
+    `<span>${icon("users", 15)} ${esc(r.yield || "3 pers.")}</span>`,
+    `<span>${icon("list", 15)} ${r.ingredients.length} ingr.</span>`
+  ].filter(Boolean).join("");
+  const second = r.meat ? "Avec viande · Baptiste" : (r.cookeo ? "Cookeo" : "");
+  return `<button class="recipe-card" data-action="${action}" data-id="${r.id}">
+    <span class="rc-title">${esc(r.name)}${last ? "" : `<span class="pill-new">Nouveau</span>`}</span>
+    <span class="rc-meta">${meta}</span>
+    <span class="rc-foot"><span class="tags"><span class="tag">${esc(r.category)}</span>${second ? `<span class="tag">${second}</span>` : ""}</span>
+      ${last ? `<span class="rc-last">${last}</span>` : ""}</span>
+  </button>`;
 }
 function renderRecipeList() {
   const el = $("#recipeList");
   if (!el) return;
-  const list = state.recipes.filter(r => matchesFilters(r, ui.filters.recipes, activeSeason()))
-    .sort((a, b) => a.name.localeCompare(b.name, "fr"));
-  $("#recipeCount").textContent = `${list.length}/${state.recipes.length}`;
-  el.innerHTML = list.map(r => {
-    const info = lastMadeInfo(r.id, thisWeek());
-    return `<article class="card recipe-card" data-action="view" data-id="${r.id}" tabindex="0">
-      <h3>${esc(r.name)}</h3>
-      <div class="badges">${badges(r)}</div>
-      <p class="small muted">${r.time ? `⏱ ${r.time} min · ` : ""}${esc(r.yield || "")}${r.yield ? " · " : ""}${r.ingredients.length} ingrédients · ${info.txt}</p>
-    </article>`;
-  }).join("") || `<p class="empty">Aucune recette ne correspond aux filtres.</p>`;
+  const f = ui.filters.recipes;
+  let list = state.recipes.filter(r => matchesFilters(r, f, activeSeason()));
+  if (f.ings && f.ings.length) {
+    const keys = f.ings.map(matchKey);
+    const used = r => r.ingredients.filter(i => keys.some(k => namesMatch(matchKey(i.name), k))).length;
+    list.sort((a, b) => used(b) - used(a) || a.name.localeCompare(b.name, "fr"));
+  } else list.sort((a, b) => a.name.localeCompare(b.name, "fr"));
+  const total = state.recipes.length;
+  $("#recipeCount").textContent = list.length === total ? `${total} recettes` : `${list.length} recette${list.length > 1 ? "s" : ""} sur ${total}`;
+  el.innerHTML = list.map(r => recipeCard(r)).join("") || `<p class="empty">Aucune recette ne correspond aux filtres.</p>`;
 }
 
 function viewRecipe(id) {
@@ -720,20 +796,20 @@ function viewRecipe(id) {
   const info = lastMadeInfo(r.id, thisWeek());
   const ws = ui.weekStart, w = getWeek(ws), start = parseIso(ws);
   openModal(`
-    <div class="modal-head"><h2>${esc(r.name)}</h2><button class="icon-btn" data-action="close" aria-label="Fermer">✕</button></div>
-    <div class="badges">${badges(r)}</div>
-    <p class="small muted">${esc(yieldText(r))}${r.time ? ` · ⏱ ${r.time} min` : ""} · ${info.txt}</p>
-    ${r.cookeo ? `<div class="cookeo-box"><strong>🍲 Cookeo :</strong> ${esc(r.cookeoNote || "recette adaptée au Cookeo.")}</div>` : ""}
-    ${r.meat ? `<div class="meat-box">🍖 Recette avec viande ou poisson : pour Baptiste.</div>` : ""}
+    <div class="modal-head"><h2>${esc(r.name)}</h2><button class="icon-btn" data-action="close" aria-label="Fermer">${icon("x", 22)}</button></div>
+    <div class="tags">${badges(r)}</div>
+    <p class="rc-meta">${r.time ? `<span>${icon("clock", 15)} ${r.time} min</span>` : ""}<span>${icon("users", 15)} ${esc(yieldText(r))}</span><span>${lastCookedLabel(r.id) || "Jamais cuisinée"}</span></p>
+    ${r.cookeo ? `<div class="info-box"><strong>Cookeo :</strong> ${esc(r.cookeoNote || "recette adaptée au Cookeo.")}</div>` : ""}
+    ${r.meat ? `<div class="info-box">Recette avec viande ou poisson : pour Baptiste.</div>` : ""}
     <h3>Ingrédients <small class="muted">(${esc(yieldText(r))})</small></h3>
     <ul class="ing-list">${r.ingredients.map(i => `<li><span>${esc(i.name)}</span><span class="muted">${esc(isNum(i.qty) ? fmtQty(i.qty, i.unit) : "selon goût")}</span></li>`).join("")}</ul>
     <h3>Préparation</h3>
     <ol class="steps">${r.steps.map(s => `<li>${esc(s)}</li>`).join("")}</ol>
-    ${r.notes ? `<p class="note">💡 ${esc(r.notes)}</p>` : ""}
+    ${r.notes ? `<p class="note">${esc(r.notes)}</p>` : ""}
     ${r.source ? `<p class="small muted">Source : ${/^https?:\/\//i.test(r.source) ? `<a href="${esc(r.source)}" target="_blank" rel="noopener noreferrer">${esc(r.source.replace(/^https?:\/\/(www\.)?/i, "").slice(0, 50))}</a>` : esc(r.source)}</p>` : ""}
     ${!isDinner(r) ? `<div class="card add-to-week">
       <p class="small">Semaine du ${frDate(start, { day: "numeric", month: "short" })} : les ingrédients iront dans la liste de courses.</p>
-      <button class="btn primary" data-action="add-side" data-id="${r.id}">🍰 Ajouter à la semaine</button>
+      <button class="btn primary" data-action="add-side" data-id="${r.id}">${icon("plus", 18)} Ajouter à la semaine</button>
     </div>` : `<div class="card add-to-week">
       <label for="addDay" class="small">Ajouter à la semaine du ${frDate(start, { day: "numeric", month: "short" })} :</label>
       <div class="row">
@@ -742,9 +818,9 @@ function viewRecipe(id) {
       </div>
     </div>`}
     <div class="modal-actions">
-      <button class="btn" data-action="edit-recipe" data-id="${r.id}">✏️ Modifier</button>
-      <button class="btn" data-action="dup-recipe" data-id="${r.id}">⧉ Dupliquer</button>
-      <button class="btn danger" data-action="delete-recipe" data-id="${r.id}">🗑 Supprimer</button>
+      <button class="btn" data-action="edit-recipe" data-id="${r.id}">${icon("pencil", 18)} Modifier</button>
+      <button class="btn" data-action="dup-recipe" data-id="${r.id}">${icon("copy", 18)} Dupliquer</button>
+      <button class="btn danger" data-action="delete-recipe" data-id="${r.id}">${icon("trash", 18)} Supprimer</button>
     </div>`);
 }
 
@@ -754,7 +830,7 @@ function ingRow(i = { name: "", qty: "", unit: "g", aisle: "leg" }) {
     <input name="iqty" placeholder="Qté" inputmode="decimal" value="${isNum(i.qty) ? String(i.qty).replace(".", ",") : ""}" aria-label="Quantité">
     <select name="iunit" aria-label="Unité">${(UNITS.includes(i.unit) || !i.unit ? UNITS : [i.unit, ...UNITS]).map(u => `<option ${u === i.unit ? "selected" : ""}>${u}</option>`).join("")}</select>
     <select name="iaisle" aria-label="Rayon">${Object.entries(AISLES).map(([k, v]) => `<option value="${k}" ${k === i.aisle ? "selected" : ""}>${v}</option>`).join("")}</select>
-    <button type="button" class="icon-btn small" data-action="del-ing-row" aria-label="Supprimer l'ingrédient">✕</button>
+    <button type="button" class="icon-btn" data-action="del-ing-row" aria-label="Supprimer l'ingrédient">${icon("x", 20)}</button>
   </div>`;
 }
 function editRecipe(id, asCopy = false) {
@@ -767,7 +843,7 @@ function editRecipe(id, asCopy = false) {
   openModal(`
     <form id="recipeForm" data-id="${r.id || ""}">
       <div class="modal-head"><h2>${r.id ? "Modifier la recette" : "Nouvelle recette"}</h2>
-        <button type="button" class="icon-btn" data-action="close" aria-label="Fermer">✕</button></div>
+        <button type="button" class="icon-btn" data-action="close" aria-label="Fermer">${icon("x", 22)}</button></div>
       <label>Nom<input name="name" required value="${esc(r.name)}"></label>
       <div class="row">
         <label>Catégorie<select name="category">${allCategories().map(c => `<option ${c === r.category ? "selected" : ""}>${esc(c)}</option>`).join("")}</select></label>
@@ -775,16 +851,16 @@ function editRecipe(id, asCopy = false) {
       </div>
       <label>Rendement (vide = 3 portions)<input name="yield" value="${esc(r.yield || "")}" placeholder="ex : 1 tarte, 12 biscuits, 6 verrines"></label>
       <fieldset><legend>Saisons</legend>
-        ${Object.keys(SEASON_LABELS).map(s => `<label class="chk"><input type="checkbox" name="season" value="${s}" ${r.seasons.includes(s) ? "checked" : ""}> ${SEASON_ICONS[s]} ${SEASON_LABELS[s]}</label>`).join("")}
+        ${Object.keys(SEASON_LABELS).map(s => `<label class="chk"><input type="checkbox" name="season" value="${s}" ${r.seasons.includes(s) ? "checked" : ""}> ${SEASON_LABELS[s]}</label>`).join("")}
       </fieldset>
       <div class="row">
-        <label class="chk"><input type="checkbox" name="meat" ${r.meat ? "checked" : ""}> 🍖 Avec viande ou poisson (Baptiste)</label>
-        <label class="chk"><input type="checkbox" name="cookeo" ${r.cookeo ? "checked" : ""}> 🍲 Cookeo</label>
+        <label class="chk"><input type="checkbox" name="meat" ${r.meat ? "checked" : ""}> Avec viande ou poisson (Baptiste)</label>
+        <label class="chk"><input type="checkbox" name="cookeo" ${r.cookeo ? "checked" : ""}> Cookeo</label>
       </div>
       <label>Programme Cookeo (si pertinent)<input name="cookeoNote" value="${esc(r.cookeoNote)}" placeholder="ex : Dorer 3 min puis sous pression 10 min"></label>
       <fieldset><legend>Ingrédients pour 3 portions</legend>
         <div id="ingRows">${r.ingredients.map(ingRow).join("")}</div>
-        <button type="button" class="btn small" data-action="add-ing-row">＋ Ingrédient</button>
+        <button type="button" class="btn small" data-action="add-ing-row">${icon("plus", 16)} Ingrédient</button>
       </fieldset>
       <label>Étapes (une par ligne)<textarea name="steps" rows="6">${esc(r.steps.join("\n"))}</textarea></label>
       <label>Notes<textarea name="notes" rows="2">${esc(r.notes)}</textarea></label>
@@ -1038,7 +1114,7 @@ function openSyncSettings() {
 function openPasteRecipe() {
   openModal(`
     <form id="pasteForm">
-      <div class="modal-head"><h2>📥 Coller une recette</h2><button type="button" class="icon-btn" data-action="close" aria-label="Fermer">✕</button></div>
+      <div class="modal-head"><h2>Coller une recette</h2><button type="button" class="icon-btn" data-action="close" aria-label="Fermer">${icon("x", 22)}</button></div>
       <p class="small">Collez ici le bloc de recette (format JSON) que Claude vous a préparé. Une recette avec le même identifiant est mise à jour.</p>
       <textarea name="json" rows="12" class="export-text" placeholder='{ "name": "…", "ingredients": [ ["farine T45", 250, "g", "fec"] ], "steps": ["…"] }' required></textarea>
       <div class="modal-actions"><button type="submit" class="btn primary">Importer</button></div>
@@ -1291,6 +1367,16 @@ const ACTIONS = {
   },
 
   "season-sheet": () => openSeasonSheet(),
+  "close-sheet": () => closeSheet(),
+  "filter-sheet": el => openFilterSheet(el.dataset.scope),
+  "chip-toggle": el => { const f = ui.filters[el.dataset.scope]; f[el.dataset.key] = !f[el.dataset.key]; refreshFilters(el.dataset.scope); },
+  "chip-clear": el => { const f = ui.filters[el.dataset.scope]; f[el.dataset.key] = el.dataset.key === "ings" ? [] : ""; refreshFilters(el.dataset.scope); },
+  "set-filter": el => { ui.filters[el.dataset.scope][el.dataset.key] = el.dataset.value; refreshFilters(el.dataset.scope); },
+  "reset-filters": el => {
+    const f = ui.filters[el.dataset.scope];
+    Object.assign(f, { season: el.dataset.scope === "picker" ? "current" : "", cat: "", meat: "", cookeo: false, quick: false, ings: [] });
+    refreshFilters(el.dataset.scope);
+  },
   "set-season": el => {
     prefs.season = el.dataset.season || "";
     if (!prefs.season) delete prefs.season;
@@ -1331,15 +1417,16 @@ document.addEventListener("click", e => {
   ACTIONS[el.dataset.action](el, e);
 });
 document.addEventListener("keydown", e => {
-  if (e.key === "Enter" && e.target.matches(".recipe-card")) viewRecipe(e.target.dataset.id);
+  if (e.key === "Escape" && sheet.open) { e.preventDefault(); closeSheet(); }
 });
 
 document.addEventListener("input", e => {
   const t = e.target;
   if (t.dataset.filter) {
-    const scope = t.closest(".filters").dataset.scope;
+    const scope = t.dataset.scope;
     ui.filters[scope][t.dataset.filter] = t.type === "checkbox" ? t.checked : t.value;
-    (scope === "picker" ? renderPickerList : renderRecipeList)();
+    if (t.dataset.filter === "q") (scope === "picker" ? renderPickerList : renderRecipeList)();
+    else refreshFilters(scope);
   } else if (t.dataset.idea) {
     ui.ideas[t.dataset.idea] = t.type === "checkbox" ? t.checked : +t.value;
     renderIdeas();
