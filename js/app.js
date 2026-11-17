@@ -186,12 +186,12 @@ function addToPantry(name, qty, unit, fuzzy = false) {
   const p = fuzzy
     ? findPantry(name, b.u)
     : state.pantry.find(x => matchKey(x.name) === k && (!isNum(x.qty) || b.q === null || toBase(x.qty, x.unit).u === b.u));
-  if (!p) { state.pantry.push({ id: uid(), name, qty: b.q, unit: b.q === null ? "" : b.u }); return; }
+  if (!p) { state.pantry.push({ id: uid(), name, qty: b.q, unit: b.q === null ? "" : b.u, addedAt: iso(new Date()) }); return; }
   if (b.q === null) return;
   if (!isNum(p.qty)) { p.qty = b.q; p.unit = b.u; return; }
   const pb = toBase(p.qty, p.unit);
   if (pb.u === b.u) { p.qty = pb.q + b.q; p.unit = pb.u; }
-  else state.pantry.push({ id: uid(), name, qty: b.q, unit: b.u });
+  else state.pantry.push({ id: uid(), name, qty: b.q, unit: b.u, addedAt: iso(new Date()) });
 }
 /** Déduit les ingrédients d'une recette des quantités suivies au garde-manger. */
 function deductFromPantry(r) {
@@ -206,6 +206,7 @@ function deductFromPantry(r) {
     const used = Math.min(b.q, pb.q);
     p.qty = Math.max(0, pb.q - b.q);
     p.unit = pb.u;
+    if (used > 0) p.opened = true;
     log.push({ id: p.id, name: p.name, unit: pb.u, qty: used });
     msgs.push(`${p.name} : ${p.qty > 0 ? fmtQty(p.qty, p.unit) + " restant" : "épuisé"}`);
   }
@@ -914,45 +915,124 @@ function saveRecipeForm(form) {
   toast("Recette enregistrée ✓");
 }
 
-/* ---------- Onglet Garde-manger ---------- */
+/* ---------- Onglet Placard ---------- */
+function pantryQtyText(p) {
+  if (!isNum(p.qty)) return "En stock";
+  return +p.qty <= 0 ? "Épuisé" : fmtQty(p.qty, p.unit);
+}
+function pantryNote(p) {
+  const notes = [];
+  if (p.addedAt) {
+    const d = Math.round((parseIso(iso(new Date())) - parseIso(p.addedAt)) / 864e5);
+    notes.push(d <= 0 ? "Ajouté aujourd'hui" : d === 1 ? "Ajouté hier" : `Ajouté il y a ${d} jours`);
+  }
+  if (p.opened) notes.push("Entamé");
+  return notes.join(" · ");
+}
+function pantryRow(p, withNote) {
+  const empty = isNum(p.qty) && +p.qty <= 0;
+  const note = withNote ? pantryNote(p) : "";
+  return `<li class="swipe" data-id="${p.id}">
+    <div class="swipe-bg" aria-hidden="true">${icon("trash", 20)} Supprimer</div>
+    <button class="row-item swipe-fg" data-action="pantry-open" data-id="${p.id}" aria-label="${esc(p.name)}, ${esc(pantryQtyText(p))}. Modifier">
+      <span class="grow"><span class="p-title">${esc(p.name)}</span>${note ? `<span class="meta">${esc(note)}</span>` : ""}</span>
+      <span class="trail"><span class="p-q ${empty ? "is-empty" : ""}">${esc(pantryQtyText(p))}</span>${icon("chevronRight", 18)}</span>
+    </button></li>`;
+}
 function renderPantry() {
   const q = norm(ui.pantryQ);
-  const items = state.pantry.filter(p => !q || norm(p.name).includes(q)).sort((a, b) => a.name.localeCompare(b.name, "fr"));
-  const present = new Set(state.pantry.map(p => matchKey(p.name)));
+  const all = state.pantry.slice().sort((a, b) => a.name.localeCompare(b.name, "fr"));
+  const items = all.filter(p => !q || norm(p.name).includes(q));
+  const soon = items.filter(p => p.soon), stock = items.filter(p => !p.soon);
+  const n = state.pantry.length;
   $("#tab-pantry").innerHTML = `
-    <div class="section-head"><h2>Mon garde-manger <small>${state.pantry.length}</small></h2></div>
-    <form id="pantryForm" class="card">
-      <div class="row">
-        <input name="name" placeholder="Ingrédient (ex : farine T45)" list="ingNames" required>
-      </div>
-      <div class="row">
-        <input name="qty" placeholder="Quantité (facultatif)" inputmode="decimal" class="qty-input">
-        <select name="unit" aria-label="Unité"><option value="">sans quantité</option>${UNITS.map(u => `<option ${u === "g" ? "selected" : ""}>${u}</option>`).join("")}</select>
-        <button class="btn primary">Ajouter</button>
-      </div>
-      <p class="hint">Sans quantité, l'ingrédient est considéré comme « en stock » (sel, épices…). Avec une quantité (ex : farine T45 1 kg), elle diminue automatiquement quand vous marquez un dîner « cuisiné ».</p>
-    </form>
-    <div class="chips"><span class="small muted">Ajout rapide :</span>
-      ${PANTRY_QUICK.filter(n => !present.has(matchKey(n))).map(n => `<button class="chip" data-action="pantry-quick" data-name="${esc(n)}">＋ ${esc(n)}</button>`).join("")}
-    </div>
-    ${state.pantry.length > 6 ? `<input type="search" id="pantrySearch" placeholder="🔍 Rechercher dans le garde-manger" value="${esc(ui.pantryQ)}">` : ""}
-    <ul class="pantry-list">
-      ${items.map(p => {
-        const tracked = isNum(p.qty);
-        const empty = tracked && +p.qty <= 0;
-        return `<li class="${empty ? "empty-stock" : ""}">
-          <span class="p-name">${esc(p.name)}</span>
-          <span class="p-qty">${tracked ? (empty ? "épuisé" : esc(fmtQty(p.qty, p.unit))) : `<span class="muted">en stock</span>`}</span>
-          <span class="p-actions">
-            ${tracked ? `<button class="btn small" data-action="pantry-use" data-id="${p.id}">− Utiliser</button>` : ""}
-            <button class="icon-btn small" data-action="pantry-edit" data-id="${p.id}" aria-label="Modifier la quantité">✏️</button>
-            <button class="icon-btn small" data-action="pantry-del" data-id="${p.id}" aria-label="Supprimer">✕</button>
-          </span></li>`;
-      }).join("") || `<li class="empty">Votre garde-manger est vide. Ajoutez ce que vous avez déjà à la maison.</li>`}
-    </ul>
-    ${state.pantry.length ? `<div class="toolbar"><button class="btn" data-action="goto" data-tab="ideas">💡 Que cuisiner avec ça ?</button>
-      <button class="btn ghost" data-action="pantry-clear-empty">Retirer les épuisés</button></div>` : ""}`;
+    <div class="page-head"><div><h1 id="h-pantry">Placard</h1><p class="sub">${n} ingrédient${n > 1 ? "s" : ""}</p></div>
+      <button class="btn primary pill" data-action="pantry-add-sheet">${icon("plus", 18)} Ajouter</button></div>
+    ${n > 8 ? `<div class="search"><label for="pantrySearch" class="sr-only">Rechercher dans le placard</label>${icon("search", 20)}
+      <input type="search" id="pantrySearch" placeholder="Rechercher" value="${esc(ui.pantryQ)}" autocomplete="off"></div>` : ""}
+    ${soon.length ? `<section class="soon-box" aria-labelledby="soonTitle">
+      <h2 class="soon-title" id="soonTitle">${icon("alert", 18)} À consommer vite</h2>
+      <ul class="list">${soon.map(p => pantryRow(p, true)).join("")}</ul>
+      <button class="link soon-link" data-action="recipes-for-soon">Voir les recettes qui les utilisent ${icon("chevronRight", 16)}</button>
+    </section>` : ""}
+    ${n ? `<h2 class="section-title">En stock</h2>
+      ${stock.length ? `<ul class="list">${stock.map(p => pantryRow(p, false)).join("")}</ul>` : `<p class="hint">Rien d'autre${q ? " pour cette recherche" : ""}.</p>`}
+      <p class="hint pantry-help">${icon("info", 16)} Sans quantité, un ingrédient est « en stock » ; avec une quantité, elle diminue quand un dîner est marqué cuisiné. Glisser une ligne vers la gauche pour la supprimer.</p>
+      <div class="toolbar">
+        <button class="btn" data-action="goto" data-tab="ideas">${icon("bulb", 18)} Que cuisiner avec mon placard ?</button>
+        ${all.some(p => isNum(p.qty) && +p.qty <= 0) ? `<button class="btn ghost" data-action="pantry-clear-empty">Retirer les épuisés</button>` : ""}
+      </div>`
+    : `<div class="empty card">Ton placard est vide.<br>Ajoute ce que tu as déjà à la maison : il sera retiré de la liste de courses.
+        <br><button class="btn primary" data-action="pantry-add-sheet">${icon("plus", 18)} Ajouter un ingrédient</button></div>`}`;
 }
+const unitOptions = (sel = "g") => `<option value="">sans quantité</option>${UNITS.map(u => `<option ${u === sel ? "selected" : ""}>${u}</option>`).join("")}`;
+function openPantryAddSheet() {
+  const present = new Set(state.pantry.map(p => matchKey(p.name)));
+  const quick = PANTRY_QUICK.filter(n => !present.has(matchKey(n)));
+  openSheet(`<form id="pantryForm" autocomplete="off">
+    <h2>Ajouter au placard</h2>
+    <label>Ingrédient<input name="name" list="ingNames" placeholder="ex : farine T45" required></label>
+    <div class="row"><label>Quantité<input name="qty" inputmode="decimal" placeholder="Quantité"></label>
+      <label>Unité<select name="unit">${unitOptions("g")}</select></label></div>
+    <label class="chk"><input type="checkbox" name="soon"> À consommer vite</label>
+    <button class="btn primary full sheet-cta">Ajouter</button>
+    ${quick.length ? `<h3 class="sheet-label">Ajout rapide (en stock, sans quantité)</h3>
+      <div class="seg">${quick.map(n => `<button type="button" data-action="pantry-quick" data-name="${esc(n)}">${icon("plus", 14)} ${esc(n)}</button>`).join("")}</div>` : ""}
+  </form>`, "Ajouter au placard");
+}
+function openPantryEditSheet(id) {
+  const p = state.pantry.find(x => x.id === id);
+  if (!p) return;
+  const tracked = isNum(p.qty);
+  const disp = tracked ? fmtQty(p.qty, p.unit).replace(/^([\d,]+) (.*)$/, "$1") : "";
+  const unitDisp = tracked ? (p.unit === "g" && p.qty >= 1000 ? "kg" : p.unit === "ml" && p.qty >= 1000 ? "l" : p.unit) : "";
+  openSheet(`<form id="pantryEditForm" data-id="${p.id}" autocomplete="off">
+    <div class="sheet-head"><h2>${esc(p.name)}</h2><span class="muted">${esc(pantryQtyText(p))}</span></div>
+    <div class="row"><label>Quantité<input name="qty" inputmode="decimal" placeholder="Quantité" value="${esc(disp)}"></label>
+      <label>Unité<select name="unit">${unitOptions(unitDisp)}</select></label></div>
+    ${tracked ? `<div class="row use-row"><label>J'en ai utilisé (${esc(p.unit || "pièce")})<input name="used" inputmode="decimal" placeholder="${p.unit === "g" || p.unit === "ml" ? "ex : 400" : "ex : 1"}"></label>
+      <button type="button" class="btn" data-action="pantry-use" data-id="${p.id}">${icon("minus", 16)} Utiliser</button></div>` : ""}
+    <label class="chk"><input type="checkbox" name="soon" ${p.soon ? "checked" : ""}> À consommer vite</label>
+    <button class="btn primary full sheet-cta">Enregistrer</button>
+    <button type="button" class="btn danger full" data-action="pantry-del" data-id="${p.id}">${icon("trash", 18)} Supprimer</button>
+  </form>`, p.name);
+}
+/** Suppression sans confirmation, avec « Annuler » pendant 5 s. */
+function deletePantryItem(id) {
+  const i = state.pantry.findIndex(x => x.id === id);
+  if (i < 0) return;
+  const [item] = state.pantry.splice(i, 1);
+  save(); closeSheet(); render();
+  toast(`${item.name} supprimé`, { action: "Annuler", onAction: () => { state.pantry.splice(i, 0, item); save(); render(); } });
+}
+
+/* Glisser une ligne du placard vers la gauche pour la supprimer */
+(() => {
+  let row = null, fg = null, x0 = 0, y0 = 0, dx = 0, swiping = false;
+  document.addEventListener("pointerdown", e => {
+    const f = e.target.closest(".swipe-fg");
+    if (!f || e.pointerType === "mouse" && e.button !== 0) return;
+    row = f.closest(".swipe"); fg = f; x0 = e.clientX; y0 = e.clientY; dx = 0; swiping = false;
+  });
+  document.addEventListener("pointermove", e => {
+    if (!fg) return;
+    const mx = e.clientX - x0, my = e.clientY - y0;
+    if (!swiping && Math.abs(mx) > 10 && Math.abs(mx) > Math.abs(my) * 1.5) { swiping = true; row.classList.add("swiping"); }
+    if (!swiping) return;
+    dx = Math.min(0, mx);
+    fg.style.transform = `translateX(${dx}px)`;
+  });
+  const end = () => {
+    if (!fg) return;
+    const id = row.dataset.id, del = swiping && dx < -96;
+    fg.style.transform = ""; row.classList.remove("swiping");
+    if (swiping) { fg.dataset.swiped = "1"; setTimeout(() => { if (fg) delete fg.dataset.swiped; }, 50); }
+    const f = fg; fg = null; row = null;
+    if (del) deletePantryItem(id); else if (swiping) setTimeout(() => delete f.dataset.swiped, 50);
+  };
+  document.addEventListener("pointerup", end);
+  document.addEventListener("pointercancel", end);
+})();
 
 /* ---------- Onglet Idées de dernière minute ---------- */
 function availability(r, ignoreBasics) {
@@ -974,10 +1054,12 @@ function availability(r, ignoreBasics) {
 }
 function renderIdeas() {
   const o = ui.ideas;
+  const head = `<div class="page-head"><div class="with-back">
+      <button class="round-btn" data-action="goto" data-tab="pantry" aria-label="Retour au placard">${icon("chevronLeft", 22)}</button>
+      <div><h1 id="h-ideas">Avec mon placard</h1><p class="sub">Recettes réalisables avec ce que tu as</p></div></div></div>`;
   if (!state.pantry.length) {
-    $("#tab-ideas").innerHTML = `<div class="section-head"><h2>Idées de dernière minute</h2></div>
-      <div class="empty card">Renseignez d'abord ce que vous avez à la maison.<br>
-      <button class="btn primary" data-action="goto" data-tab="pantry">Remplir mon garde-manger</button></div>`;
+    $("#tab-ideas").innerHTML = head + `<div class="empty card">Renseigne d'abord ce que tu as à la maison.<br>
+      <button class="btn primary" data-action="pantry-add-sheet">${icon("plus", 18)} Ajouter au placard</button></div>`;
     return;
   }
   const s = activeSeason();
@@ -987,27 +1069,26 @@ function renderIdeas() {
     .filter(x => x.a.missing.length <= o.maxMissing)
     .sort((x, y) => x.a.missing.length - y.a.missing.length || (y.a.have / y.a.total) - (x.a.have / x.a.total));
   const card = ({ r, a }) => `<article class="card idea">
-      <button class="recipe-link" data-action="view" data-id="${r.id}">${esc(r.name)}</button>
-      <div class="badges">${badges(r)}</div>
-      <div class="progress small-progress"><span style="width:${a.total ? Math.round(a.have / a.total * 100) : 100}%"></span></div>
-      <p class="small">${a.missing.length ? `<span class="warn-text">Il manque : ${a.missing.map(esc).join(", ")}</span>` : "✅ Vous avez tout ce qu'il faut"}</p>
-      <div class="day-actions">
-        <button class="btn small primary" data-action="tonight" data-id="${r.id}">🍽 Pour ce soir</button>
-        ${a.missing.length ? `<button class="btn small" data-action="missing-to-list" data-id="${r.id}">＋ Manquants à la liste</button>` : ""}
+      <button class="dc-title" data-action="view" data-id="${r.id}">${esc(r.name)}</button>
+      <div class="tags"><span class="tag">${esc(r.category)}</span>${r.meat ? `<span class="tag">Avec viande · Baptiste</span>` : ""}</div>
+      <div class="progress" aria-hidden="true"><span style="width:${a.total ? Math.round(a.have / a.total * 100) : 100}%"></span></div>
+      <p class="small ${a.missing.length ? "warn-text" : "ok-text"}">${a.missing.length ? `Il manque : ${a.missing.map(esc).join(", ")}` : "Tu as tout ce qu'il faut"}</p>
+      <div class="toolbar tight">
+        <button class="btn small primary" data-action="tonight" data-id="${r.id}">${icon("utensils", 16)} Pour ce soir</button>
+        ${a.missing.length ? `<button class="btn small" data-action="missing-to-list" data-id="${r.id}">${icon("cart", 16)} Manquants à la liste</button>` : ""}
       </div>
     </article>`;
   const ready = res.filter(x => !x.a.missing.length), almost = res.filter(x => x.a.missing.length);
-  $("#tab-ideas").innerHTML = `
-    <div class="section-head"><h2>Idées de dernière minute</h2></div>
-    <div class="filters">
-      <label class="chk"><input type="checkbox" data-idea="ignoreBasics" ${o.ignoreBasics ? "checked" : ""}> Ignorer sel, poivre, huiles & épices</label>
-      <label class="chk"><input type="checkbox" data-idea="seasonOnly" ${o.seasonOnly ? "checked" : ""}> De saison uniquement</label>
-      <label class="chk">Manque au plus
-        <select data-idea="maxMissing">${[0, 1, 2, 3, 4, 5].map(n => `<option ${n === o.maxMissing ? "selected" : ""}>${n}</option>`).join("")}</select> ingrédient(s)</label>
+  $("#tab-ideas").innerHTML = head + `
+    <div class="seg ideas-opts">
+      <button aria-pressed="${o.ignoreBasics}" data-action="idea-opt" data-key="ignoreBasics">Ignorer sel, huiles et épices</button>
+      <button aria-pressed="${o.seasonOnly}" data-action="idea-opt" data-key="seasonOnly">De saison uniquement</button>
     </div>
-    ${ready.length ? `<h3 class="group-title">✅ Réalisables maintenant (${ready.length})</h3><div class="cards">${ready.map(card).join("")}</div>` : ""}
-    ${almost.length ? `<h3 class="group-title">🛒 Presque (${almost.length})</h3><div class="cards">${almost.map(card).join("")}</div>` : ""}
-    ${!res.length ? `<p class="empty">Aucune recette avec ces critères. Augmentez le nombre d'ingrédients manquants autorisés.</p>` : ""}`;
+    <label class="inline-select">Il manque au plus
+      <select data-idea="maxMissing">${[0, 1, 2, 3, 4, 5].map(n => `<option ${n === o.maxMissing ? "selected" : ""}>${n}</option>`).join("")}</select> ingrédient(s)</label>
+    ${ready.length ? `<h2 class="section-title">Réalisables maintenant · ${ready.length}</h2><div class="cards">${ready.map(card).join("")}</div>` : ""}
+    ${almost.length ? `<h2 class="section-title">Presque · ${almost.length}</h2><div class="cards">${almost.map(card).join("")}</div>` : ""}
+    ${!res.length ? `<p class="empty">Aucune recette avec ces critères : augmente le nombre d'ingrédients manquants autorisés.</p>` : ""}`;
 }
 
 /* ---------- Onglet Historique ---------- */
@@ -1310,31 +1391,27 @@ const ACTIONS = {
     save(); render(); toast("Courses rangées au garde-manger 🥫");
   },
 
-  "pantry-quick": el => { addToPantry(el.dataset.name, null, ""); save(); render(); },
-  "pantry-del": el => { state.pantry = state.pantry.filter(p => p.id !== el.dataset.id); save(); render(); },
+  "pantry-add-sheet": () => openPantryAddSheet(),
+  "idea-opt": el => { ui.ideas[el.dataset.key] = !ui.ideas[el.dataset.key]; renderIdeas(); },
+  "pantry-open": el => { if (el.dataset.swiped) return; openPantryEditSheet(el.dataset.id); },
+  "pantry-quick": el => { addToPantry(el.dataset.name, null, ""); save(); render(); openPantryAddSheet(); toast(`${el.dataset.name} ajouté`); },
+  "pantry-del": el => deletePantryItem(el.dataset.id),
   "pantry-use": el => {
     const p = state.pantry.find(x => x.id === el.dataset.id);
-    if (!p) return;
-    const ans = prompt(`Quantité de « ${p.name} » utilisée ? (ex : 400 g) — reste : ${fmtQty(p.qty, p.unit)}`);
-    if (ans === null) return;
-    const v = parseQtyUnit(ans, p.unit);
-    if (!v || v.qty === null) return alert("Quantité non reconnue. Exemple : 400 g");
+    const f = $("#pantryEditForm");
+    if (!p || !f) return;
+    const v = parseQtyUnit(f.used.value, p.unit);
+    if (!v || v.qty === null) return toast("Indique la quantité utilisée, ex : 400");
     const used = toBase(v.qty, v.unit), pb = toBase(p.qty, p.unit);
-    if (used.u !== pb.u) return alert(`Unité incompatible avec ${fmtQty(p.qty, p.unit)}.`);
-    p.qty = Math.max(0, pb.q - used.q); p.unit = pb.u;
-    save(); render();
+    if (used.u !== pb.u) return toast(`Unité incompatible avec ${fmtQty(p.qty, p.unit)}`);
+    p.qty = Math.max(0, pb.q - used.q); p.unit = pb.u; p.opened = true;
+    save(); render(); openPantryEditSheet(p.id);
     toast(`${p.name} : ${p.qty > 0 ? fmtQty(p.qty, p.unit) + " restant" : "épuisé"}`);
   },
-  "pantry-edit": el => {
-    const p = state.pantry.find(x => x.id === el.dataset.id);
-    if (!p) return;
-    const ans = prompt(`Quantité de « ${p.name} » (ex : 1 kg, 6 pièces).\nLaisser vide = en stock, sans suivi de quantité.`, isNum(p.qty) ? fmtQty(p.qty, p.unit).replace(/s$/, "") : "");
-    if (ans === null) return;
-    const v = parseQtyUnit(ans, p.unit || "pièce");
-    if (!v) return alert("Quantité non reconnue. Exemples : 1 kg, 500 g, 2 l, 6");
-    if (v.qty === null) { p.qty = null; p.unit = ""; }
-    else { const b = toBase(v.qty, v.unit); p.qty = b.q; p.unit = b.u; }
-    save(); render();
+  "recipes-for-soon": () => {
+    const names = state.pantry.filter(p => p.soon).map(p => p.name);
+    Object.assign(ui.filters.recipes, { q: "", season: "", cat: "", meat: "", cookeo: false, quick: false, ings: names });
+    ui.tab = "recipes"; render(); window.scrollTo(0, 0);
   },
   "pantry-clear-empty": () => { state.pantry = state.pantry.filter(p => !(isNum(p.qty) && +p.qty <= 0)); save(); render(); },
 
@@ -1346,7 +1423,7 @@ const ACTIONS = {
     w.days[i] = el.dataset.id; w.cooked[i] = false;
     ui.weekStart = ws; ui.tab = "week";
     save(); closeModal(); render(); window.scrollTo(0, 0);
-    toast("Ajouté à ce soir. Pensez à « Marquer cuisiné » pour mettre à jour le garde-manger.");
+    toast("Ajouté à ce soir");
   },
   "missing-to-list": el => {
     const r = getRecipe(el.dataset.id);
@@ -1434,7 +1511,7 @@ document.addEventListener("input", e => {
     ui.pantryQ = t.value;
     const pos = t.selectionStart;
     renderPantry();
-    const s = $("#pantrySearch"); s.focus(); s.setSelectionRange(pos, pos);
+    const s = $("#pantrySearch"); if (s) { s.focus(); s.setSelectionRange(pos, pos); }
   }
 });
 
@@ -1487,11 +1564,27 @@ document.addEventListener("submit", e => {
     const fd = new FormData(f);
     const raw = String(fd.get("qty")).trim();
     const q = raw ? parseFloat(raw.replace(",", ".")) : null;
-    if (raw && isNaN(q)) return alert("Quantité non reconnue (chiffres uniquement, ex : 1 ou 1,5).");
-    const unit = fd.get("unit") || (q !== null ? "pièce" : "");
-    addToPantry(fd.get("name"), q, unit);
-    save(); render();
-    $("#pantryForm [name=name]").focus();
+    if (raw && isNaN(q)) return toast("Quantité non reconnue (ex : 1 ou 1,5)");
+    const unit = q !== null ? (fd.get("unit") || "pièce") : "";
+    const name = String(fd.get("name")).trim();
+    addToPantry(name, q, unit);
+    if (fd.get("soon")) { const p = state.pantry.find(x => matchKey(x.name) === matchKey(name)); if (p) p.soon = true; }
+    save(); render(); closeSheet();
+    toast(`${name} ajouté au placard`);
+  } else if (f.id === "pantryEditForm") {
+    e.preventDefault();
+    const p = state.pantry.find(x => x.id === f.dataset.id);
+    if (!p) return closeSheet();
+    const raw = f.qty.value.trim();
+    if (!raw || !f.unit.value) { p.qty = null; p.unit = ""; }
+    else {
+      const v = parseFloat(raw.replace(",", "."));
+      if (isNaN(v)) return toast("Quantité non reconnue (ex : 1 ou 1,5)");
+      const b = toBase(v, f.unit.value); p.qty = b.q; p.unit = b.u;
+    }
+    if (f.soon.checked) p.soon = true; else delete p.soon;
+    save(); render(); closeSheet();
+    toast(`${p.name} mis à jour`);
   } else if (f.id === "extraForm") {
     e.preventDefault();
     const fd = new FormData(f);

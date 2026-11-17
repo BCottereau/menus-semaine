@@ -388,8 +388,36 @@ ul.simple li { padding: 4px 0; }
 .sheet-label { font-size: 14px; font-weight: 600; color: var(--text-muted); margin: 18px 0 8px; }
 .seg { display: flex; flex-wrap: wrap; gap: 8px; }
 .seg button {
+  display: inline-flex; align-items: center; gap: 6px;
   min-height: var(--tap); padding: 0 14px; border: 1px solid var(--border); border-radius: var(--r-pill);
   background: var(--surface-3); color: var(--text-2); font: inherit; font-size: 14px; font-weight: 500; cursor: pointer;
 }
 .seg button[aria-checked="true"], .seg button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--text); }
 .sheet-cta { margin-top: 24px; min-height: 52px; font-size: 16px; }
+
+/* =====================================================================
+   Écran Placard, idées
+   ===================================================================== */
+.p-title { display: block; font-weight: 500; }
+.p-q { font-size: 15px; color: var(--text-2); }
+.p-q.is-empty { color: var(--danger); }
+.swipe { position: relative; overflow: hidden; touch-action: pan-y; }
+.swipe-bg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding-right: 20px; background: #7A2418; color: #FFE4DE; font-weight: 600; font-size: 14px; }
+.swipe-fg { position: relative; transition: transform .2s; }
+.swipe.swiping .swipe-fg { transition: none; }
+.soon-box { border: 1px solid var(--warning); border-radius: var(--r-card); padding: 12px; margin: 0 0 8px; background: rgba(242, 193, 78, .04); }
+.soon-title { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; color: var(--warning); margin: 2px 4px 10px; }
+.soon-box .list { background: transparent; }
+.soon-link { display: inline-flex; align-items: center; gap: 4px; margin: 6px 4px 0; font-weight: 600; }
+.pantry-help { display: flex; gap: 8px; align-items: flex-start; }
+.pantry-help .ico { margin-top: 2px; }
+.use-row { align-items: flex-end; }
+.use-row label { flex: 1; margin: 0; }
+.sheet .btn.danger.full { margin-top: 10px; }
+.with-back { display: flex; align-items: center; gap: 12px; }
+.ideas-opts { margin-bottom: 8px; }
+.inline-select { display: flex; align-items: center; gap: 10px; color: var(--text-2); }
+.inline-select select { width: auto; min-height: var(--tap); }
+.idea .dc-title { padding-top: 0; }
+.idea .progress { margin: 10px 0 6px; }
+.ok-text { color: var(--success); }
