@@ -175,14 +175,26 @@ const AISLE_RULES = [
   ["boi", /\b(eau|jus|soda|biere|vin|cidre|champagne|coca|limonade|kombucha|sirop de (menthe|grenadine)|tisane|infusion)\b/],
   ["epi", /\b(lait de coco|lait d'amande|lait d'avoine|lait de soja|lait de riz|lait de noisette|lait vegetal|creme de coco|pate a tartiner|pate de curry|pate miso|beurre de cacahuete|puree d'amande|sauce tomate|coulis|tomates? concassee|concentre de tomate|tomates? sechee|pois chiches en boite)/],
   ["spi", /\b(sel|poivre|epice|curry|cumin|paprika|cannelle|muscade|curcuma|herbes de provence|ras el hanout|piment|moutarde|sauce soja|ketchup|mayonnaise|vanille|safran|origan|laurier|gingembre en poudre|nuoc)/],
-  ["cre", /\b(lait|yaourt|yogourt|fromage|beurre|creme|skyr|mozzarella|comte|emmental|parmesan|feta|chevre|ricotta|mascarpone|camembert|brie|raclette|reblochon|faisselle|petit suisse|kefir)/],
-  ["pro", /\b(oeuf|tofu|tempeh|seitan|lentille|pois chiche|pois casse|haricots? (rouge|blanc|noir)|flageolet|edamame|poulet|dinde|boeuf|porc|veau|agneau|canard|jambon|lardon|bacon|saumon|thon|sardine|maquereau|cabillaud|colin|crevette|gambas|poisson|viande|steak|saucisse|chorizo|merguez|proteines? de soja|pst)/],
+  ["cre", /\b(oeuf|lait|yaourt|yogourt|fromage|beurre|creme|skyr|mozzarella|comte|emmental|parmesan|feta|chevre|ricotta|mascarpone|camembert|brie|raclette|reblochon|faisselle|petit suisse|kefir)/],
+  ["pro", /\b(tofu|tempeh|seitan|lentille|pois chiche|pois casse|haricots? (rouge|blanc|noir)|flageolet|edamame|poulet|dinde|boeuf|porc|veau|agneau|canard|jambon|lardon|bacon|saumon|thon|sardine|maquereau|cabillaud|colin|crevette|gambas|poisson|viande|steak|saucisse|chorizo|merguez|proteines? de soja|pst)/],
   ["fec", /\b(pain|baguette|brioche|pate|pates|riz|semoule|quinoa|boulgour|farine|flocon|cereale|muesli|nouille|spaghetti|tagliatelle|coquillette|penne|fusilli|lasagne|gnocchi|tortilla|wrap|biscotte|polenta|sarrasin|crozet|vermicelle|pomme de terre|patate)/],
   ["leg", /\b(pomme|poire|banane|orange|citron|clementine|mandarine|pamplemousse|kiwi|raisin|fraise|framboise|myrtille|cerise|peche|nectarine|abricot|prune|melon|pasteque|ananas|mangue|avocat|figue|grenade|fruit|tomate|salade|laitue|mache|roquette|mesclun|epinard|carotte|poireau|oignon|echalote|ail|courgette|aubergine|poivron|concombre|radis|chou|brocoli|celeri|fenouil|navet|betterave|potiron|potimarron|courge|butternut|champignon|haricot vert|petits? pois|asperge|artichaut|endive|persil|coriandre|basilic|menthe|ciboulette|aneth|thym|romarin|gingembre|legume|pousse|cebette|panais|topinambour|blette)/],
   ["epi", /\b(huile|vinaigre|sucre|conserve|chocolat|cacao|cafe|the|confiture|miel|biscuit|gateau|compote|noix|amande|noisette|pistache|cajou|cacahuete|graine|levure|bouillon|olive|sirop|maizena|fecule|gelatine|agar|raisins? sec|datte|pruneau|chips|apero|cornichon|capre|whey|proteine)/]
 ];
+/* Rayon du magasin qui prime sur la donnée de la recette : en France, les œufs sont
+   rangés avec le lait (rayon à température ambiante), pas avec les protéines. */
+const STORE_AISLE = [[/\b(oeufs?|blancs? d'oeufs?|jaunes? d'oeufs?)\b/, "cre"]];
+function storeAisle(name, aisle) {
+  const n = norm(name);
+  for (const [re, a] of STORE_AISLE) if (re.test(n)) return a;
+  return aisle;
+}
 /** Rayon le plus probable d'un article : d'abord les recettes connues, puis des mots-clés. */
 function guessAisle(name) {
+  const g = guessAisleRaw(name);
+  return storeAisle(name, g);
+}
+function guessAisleRaw(name) {
   const k = matchKey(name);
   if (!k) return "div";
   const votes = {};
@@ -267,7 +279,7 @@ function computeShopping(ws) {
       const b = isNum(ing.qty) ? toBase(ing.qty, ing.unit) : { q: null, u: "" };
       const key = matchKey(ing.name) + "|" + b.u;
       let it = map.get(key);
-      if (!it) { it = { key, name: ing.name, unit: b.u, qty: b.q, aisle: ing.aisle || "epi", recipes: [] }; map.set(key, it); }
+      if (!it) { it = { key, name: ing.name, unit: b.u, qty: b.q, aisle: storeAisle(ing.name, ing.aisle || "epi"), recipes: [] }; map.set(key, it); }
       else if (b.q !== null) it.qty = (it.qty || 0) + b.q;
       if (!it.recipes.includes(r.name)) it.recipes.push(r.name);
     }
@@ -996,7 +1008,7 @@ function renderPantry() {
       <button class="link soon-link" data-action="recipes-for-soon">Voir les recettes qui les utilisent ${icon("chevronRight", 16)}</button>
     </section>` : ""}
     ${n ? `${stock.length ? Object.keys(AISLES).map(a => {
-        const group = stock.filter(p => (AISLES[p.aisle] ? p.aisle : guessAisle(p.name)) === a);
+        const group = stock.filter(p => storeAisle(p.name, AISLES[p.aisle] ? p.aisle : guessAisle(p.name)) === a);
         return group.length ? `<h2 class="section-title aisle-title">${AISLES[a]}<span>${group.length}</span></h2><ul class="list">${group.map(p => pantryRow(p, false)).join("")}</ul>` : "";
       }).join("") : `<h2 class="section-title">En stock</h2><p class="hint">Rien d'autre${q ? " pour cette recherche" : ""}.</p>`}
       <p class="hint pantry-help">${icon("info", 16)} Sans quantité, un ingrédient est « en stock » ; avec une quantité, elle diminue quand un dîner est marqué cuisiné. Glisser une ligne vers la gauche pour la supprimer.</p>

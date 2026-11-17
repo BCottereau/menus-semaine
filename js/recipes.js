@@ -2,15 +2,15 @@
    Recettes de départ — quantités pour 3 portions
    (dîner à deux + déjeuner du lendemain pour ma compagne)
    Format d'un ingrédient : [nom, quantité, unité, rayon]
-   Rayons : leg = Légumes & fruits, fec = Féculents, pro = Protéines,
-            cre = Crèmerie, epi = Épicerie, spi = Épices & condiments
+   Rayons (où l'on trouve le produit en magasin) : leg = Légumes & fruits,
+            fec = Féculents, pro = Protéines, cre = Crèmerie, lait & œufs, epi = Épicerie, spi = Épices & condiments
    ===================================================================== */
 
 const AISLES = {
   leg: "Légumes & fruits",
   fec: "Féculents",
   pro: "Protéines",
-  cre: "Crèmerie",
+  cre: "Crèmerie, lait & œufs",
   epi: "Épicerie",
   spi: "Épices & condiments",
   sur: "Surgelés",
@@ -264,7 +264,7 @@ const SEED_RECIPES = [
     cookeoNote: "Dorer 2 min, puis sous pression 12 min.",
     ing: [
       ["lentilles vertes", 250, "g", "pro"],
-      ["œufs", 4, "pièce", "pro"],
+      ["œufs", 4, "pièce", "cre"],
       ["carotte", 3, "pièce", "leg"],
       ["oignon", 1, "pièce", "leg"],
       ["ail", 1, "gousse", "leg"],
@@ -432,7 +432,7 @@ const SEED_RECIPES = [
     cookeoNote: "Riz complet : 1 volume pour 1,5 d'eau, sous pression 15 min (ou utiliser du riz de la veille).",
     ing: [
       ["tofu ferme", 250, "g", "pro"],
-      ["œufs", 2, "pièce", "pro"],
+      ["œufs", 2, "pièce", "cre"],
       ["riz complet", 200, "g", "fec"],
       ["chou chinois", 0.5, "pièce", "leg"],
       ["carotte", 2, "pièce", "leg"],
@@ -505,7 +505,7 @@ const SEED_RECIPES = [
     cookeoNote: "",
     ing: [
       ["farine de sarrasin", 250, "g", "fec"],
-      ["œufs", 6, "pièce", "pro"],
+      ["œufs", 6, "pièce", "cre"],
       ["comté râpé", 120, "g", "cre"],
       ["champignons de Paris", 250, "g", "leg"],
       ["échalote", 1, "pièce", "leg"],
@@ -526,7 +526,7 @@ const SEED_RECIPES = [
     cookeoNote: "",
     ing: [
       ["farine T45", 250, "g", "fec"],
-      ["œufs", 3, "pièce", "pro"],
+      ["œufs", 3, "pièce", "cre"],
       ["lait", 50, "cl", "cre"],
       ["beurre", 30, "g", "cre"],
       ["épinards", 500, "g", "leg"],
@@ -552,7 +552,7 @@ const SEED_RECIPES = [
       ["poireau", 3, "pièce", "leg"],
       ["fromage de chèvre", 150, "g", "cre"],
       ["crème fraîche", 10, "cl", "cre"],
-      ["œufs", 3, "pièce", "pro"],
+      ["œufs", 3, "pièce", "cre"],
       ["noix", 40, "g", "epi"],
       ["salade verte", 1, "pièce", "leg"],
       ["beurre", 20, "g", "cre"]
@@ -595,7 +595,7 @@ const SEED_RECIPES = [
     category: "Œufs & fromage", seasons: ["ete"], meat: false, cookeo: false, time: 30,
     cookeoNote: "",
     ing: [
-      ["œufs", 6, "pièce", "pro"],
+      ["œufs", 6, "pièce", "cre"],
       ["poivron", 2, "pièce", "leg"],
       ["tomate", 800, "g", "leg"],
       ["oignon", 1, "pièce", "leg"],
@@ -626,7 +626,7 @@ const SEED_RECIPES = [
       ["tomate", 600, "g", "leg"],
       ["oignon", 1, "pièce", "leg"],
       ["ail", 2, "gousse", "leg"],
-      ["œufs", 5, "pièce", "pro"],
+      ["œufs", 5, "pièce", "cre"],
       ["quinoa", 200, "g", "fec"],
       ["herbes de Provence", 1, "c. à c.", "spi"],
       ["huile d'olive", 3, "c. à s.", "epi"]
@@ -667,7 +667,7 @@ const SEED_RECIPES = [
     ing: [
       ["farine T45", 200, "g", "fec"],
       ["beurre", 100, "g", "cre"],
-      ["œufs", 3, "pièce", "pro"],
+      ["œufs", 3, "pièce", "cre"],
       ["crème fraîche", 20, "cl", "cre"],
       ["lait", 10, "cl", "cre"],
       ["poireau", 3, "pièce", "leg"],
@@ -713,7 +713,7 @@ const SEED_RECIPES = [
     ing: [
       ["pomme de terre", 700, "g", "leg"],
       ["oignon", 2, "pièce", "leg"],
-      ["œufs", 7, "pièce", "pro"],
+      ["œufs", 7, "pièce", "cre"],
       ["salade verte", 1, "pièce", "leg"],
       ["huile d'olive", 4, "c. à s.", "epi"]
     ],
